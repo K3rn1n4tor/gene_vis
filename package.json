@@ -1,0 +1,33 @@
+{
+  "name": "gene_vis",
+  "version": "0.0.1",
+  "license" : "SEE LICENSE IN LICENSE",
+  "repository": "Caleydo/gene_vis",
+  "dependencies": {
+  },
+  "peerDependencies": {
+    "caleydo_core": "*"
+  },
+  "caleydo": {
+    "plugins": {
+      "web": {
+        "type": "vis",
+        "name": "Gene Vis",
+        "filter": "matrix",
+        "icon": "icon.svg",
+        "sizeDependsOnDataDimension": [
+          false,
+          true
+        ]
+      }
+    },
+    "dependencies": {
+      "web": {
+        "d3": "~3.5.5"
+      }
+    }
+  },
+  "publishConfig": {
+    "registry": "http://registry.caleydo.org/"
+  }
+}
