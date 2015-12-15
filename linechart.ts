@@ -1,29 +1,30 @@
 /**
- * Created by Samuel Gratzl on 05.08.2014.
+ * Created by Michael Kern on 15.12.2015.
  */
 /// <reference path="../../tsd.d.ts" />
 //depend on a css dependency
 /// <amd-dependency path='css!./style' />
 
 /* global define */
-import {IVector} from "../caleydo_core/vector";
 'use strict';
 
 // first import required modules
-import d3 = require('d3')
-import vis = require('../caleydo_core/vis')
-import vector = require('../caleydo_core/vector')
+import d3 = require('d3');
+import vis = require('../caleydo_core/vis');
+import vector = require('../caleydo_core/vector');
 
-import geom = require('../caleydo_core/geom')
-import ranges = require('../caleydo_core/range')
-import C = require('../caleydo_core/main')
+import geom = require('../caleydo_core/geom');
+import ranges = require('../caleydo_core/range');
+import C = require('../caleydo_core/main');
 
 // define new class, use export to make it accessible outside of this file
-export class LineGraph extends vis.AVisInstance implements vis.IVisInstance
+export class LineChart extends vis.AVisInstance implements vis.IVisInstance
 {
   // define member variables
   private $node : d3.Selection<any>;
   private $parent : Element;
+  private xScale = d3.scale.linear();
+  private yScale = d3.scale.linear();
 
   // implement constructor, access varname : type
   constructor(public data: vector.IVector, public parent: Element, private options: any)
@@ -88,18 +89,43 @@ export class LineGraph extends vis.AVisInstance implements vis.IVisInstance
    * @param range
    * @returns {IPromise<any>}
    */
-  locateImpl(range: ranges.Range) {
-    var dims = this.data.dim;
-    var maxY = dims[0];
+  locateImpl(range: ranges.Range)
+  {
+    var rawSize = this.rawSize;
     var o = this.options;
 
     console.log('invoked line_graph.locateImpl method');
     // TODO: understand and implement locating
+    // TODO return geometric position
 
-    return this.data.data(range).then((data) => {
-      // TODO return geometric position
-      console.log(data);
-      return geom.rect(0, 0, dims[0], dims[1]);
+    return this.data.data(range).then((vec) => {
+
+      function locY(r, max, s)
+      {
+        if (r.isAll || r.isNone)
+        {
+          return [0, max * s];
+        }
+
+        var vecSlice = vec.slice(r[0], r[1] + 1);
+        var ex: any = d3.extent(vecSlice);
+        return [this.yScale(ex[1]), this.yScale(ex[0])];
+      }
+
+      function locX(r, max, s)
+      {
+        if (r.isAll || r.isNone)
+        {
+          return [0, max * s];
+        }
+        var ex: any = d3.extent(r.iter().asList());
+        return [this.xScale(ex[0]), this.xScale(ex[1])];
+      }
+
+      var xw = locX(range.dim(0), rawSize[0], o.scale[0]);
+      var yh = locX(range.dim(0), rawSize[1], o.scale[1]);
+
+      return Promise.resolve(geom.rect(xw[0], yh[0], xw[1], yh[1]));
     });
   }
 
@@ -140,14 +166,14 @@ export class LineGraph extends vis.AVisInstance implements vis.IVisInstance
   }
 
   /**
-   *
+   * update the graph with given new data
    * @param data
      */
   updateGraph(data: vector.IVector)
   {
-    console.log('update linechart')
+    //console.log('update linechart')
     // destroy svg element
-    d3.select('.line_graph').remove();
+    d3.select('.line_chart').remove();
     // assign new  data to svg element
     this.data = data;
     this.$node = this.build(d3.select(this.$parent));
@@ -171,7 +197,7 @@ export class LineGraph extends vis.AVisInstance implements vis.IVisInstance
     var $svg = $parent.append('svg').attr({
      width: size[0], // set size of svg element
      height: size[1],
-     'class': 'line_graph' // assign it a class name
+     'class': 'line_chart' // assign it a class name
     });
 
     // set group element as root (needed for transformation)
@@ -179,13 +205,13 @@ export class LineGraph extends vis.AVisInstance implements vis.IVisInstance
 
     // obtain data from vis and create vis elements
     this.data.data().then((vec) => {
-      console.log("line_graph.build is invoked");
-      console.log(size);
+      //console.log("line_graph.build is invoked");
+      //console.log(size);
       // set scales
-      var $xScale = d3.scale.linear().domain([0, this.data.dim[0]]).range([0, rawSize[0]]);
-      var $yScale = d3.scale.linear().domain(d3.extent(vec)).range([rawSize[1], 0]);
+      this.xScale.domain([0, this.data.dim[0]]).range([0, rawSize[0]]);
+      this.yScale.domain(d3.extent(vec)).range([rawSize[1], 0]);
 
-      console.log('vector extent = ' + d3.extent(vec).toString());
+      //console.log('vector extent = ' + d3.extent(vec).toString());
 
       //var test = [];
       // test
@@ -193,14 +219,14 @@ export class LineGraph extends vis.AVisInstance implements vis.IVisInstance
 
       // compute lines
       var $lineFunction = d3.svg.line()
-        .x( (d, i) => { return $xScale(i); })
-        .y( (d) => { return $yScale(<any>d); })
+        .x( (d, i) => { return this.xScale(i); })
+        .y( (d) => { return this.yScale(<any>d); })
         .interpolate('linear');
 
       // create path element
       $root.append('line')
-        .attr({'x1': 0, 'y1': $yScale(0),
-               'x2': size[0], 'y2': $yScale(0),
+        .attr({'x1': 0, 'y1': this.yScale(0),
+               'x2': size[0], 'y2': this.yScale(0),
               'class': 'zeroLine'
           });
 
@@ -216,9 +242,9 @@ export class LineGraph extends vis.AVisInstance implements vis.IVisInstance
   }
 }
 
-// export create function to create a new LineGraph instance
+// export create function to create a new LineChart instance
 export function create(data: vector.IVector, parent: Element, options)
 {
-  return new LineGraph(data, parent, options);
+  return new LineChart(data, parent, options);
 }
 

@@ -6,20 +6,29 @@
   "dependencies": {
   },
   "peerDependencies": {
-    "caleydo_core": "*"
+    "caleydo_core": "*",
+    "caleydo_d3": "*"
   },
   "caleydo": {
     "plugins": {
-      "web": {
-        "type": "vis",
-        "name": "Gene Vis",
-        "filter": "matrix",
-        "icon": "icon.svg",
-        "sizeDependsOnDataDimension": [
-          false,
-          true
-        ]
-      }
+      "web": [
+        {
+          "type": "vis",
+          "id": "line_chart",
+          "name": "Line Chart",
+          "file": "linechart",
+          "filter": "vector",
+          "icon": "icon.svg"
+        },
+        {
+          "type": "vis",
+          "id": "box_chart",
+          "name": "Box Chart",
+          "file": "boxchart",
+          "filter": "vector",
+          "icon": "icon.svg"
+        }
+      ]
     },
     "dependencies": {
       "web": {
