@@ -22,7 +22,6 @@ export class LineChart extends vis.AVisInstance implements vis.IVisInstance
 {
   // define member variables
   private $node : d3.Selection<any>;
-  private $parent : Element;
   private xScale = d3.scale.linear();
   private yScale = d3.scale.linear();
 
@@ -36,7 +35,6 @@ export class LineChart extends vis.AVisInstance implements vis.IVisInstance
       scale: [4, 2],
       rotate: 0}, options);
     // invoke build method to create svg element
-    this.$parent = parent;
     this.$node = this.build(d3.select(parent));
     // assign data to svg element
     this.$node.datum(data);
@@ -176,7 +174,7 @@ export class LineChart extends vis.AVisInstance implements vis.IVisInstance
     d3.select('.line_chart').remove();
     // assign new  data to svg element
     this.data = data;
-    this.$node = this.build(d3.select(this.$parent));
+    this.$node = this.build(d3.select(this.parent));
     this.$node.datum(data);
     vis.assignVis(<Element>this.$node.node(), this);
   }
@@ -243,7 +241,7 @@ export class LineChart extends vis.AVisInstance implements vis.IVisInstance
 }
 
 // export create function to create a new LineChart instance
-export function create(data: vector.IVector, parent: Element, options)
+export function create(data: vector.IVector, parent: Element, options) : vis.AVisInstance
 {
   return new LineChart(data, parent, options);
 }

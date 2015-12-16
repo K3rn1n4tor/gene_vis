@@ -27,7 +27,6 @@ export class BoxChart extends vis.AVisInstance implements vis.IVisInstance
       scale:[5, 2],
       rotate: 0}, options);
 
-    this.$parent = parent;
     this.$node = this.build(d3.select(parent));
     this.$node.datum(data);
     vis.assignVis(<Element>this.$node.node(), this);
@@ -100,7 +99,7 @@ export class BoxChart extends vis.AVisInstance implements vis.IVisInstance
     d3.select('.box_chart').remove();
 
     this.data = data;
-    this.$node = this.build(d3.select(this.$parent));
+    this.$node = this.build(d3.select(this.parent));
     this.$node.datum(data);
     vis.assignVis(<Element>this.$node.node(), this);
   }
@@ -157,7 +156,7 @@ export class BoxChart extends vis.AVisInstance implements vis.IVisInstance
   }
 }
 
-export function create(data: vector.IVector, parent: Element, options: any)
+export function create(data: vector.IVector, parent: Element, options: any) : vis.AVisInstance
 {
   return new BoxChart(data, parent, options);
 }

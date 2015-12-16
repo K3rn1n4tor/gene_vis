@@ -27,6 +27,14 @@
           "file": "boxchart",
           "filter": "vector",
           "icon": "icon.svg"
+        },
+        {
+          "type": "vis",
+          "id": "box_plot",
+          "name": "Box Plot",
+          "file": "boxplot",
+          "filter": "vector",
+          "icon": "icon.svg"
         }
       ]
     },
