@@ -135,8 +135,7 @@ export class BoxChart extends vis.AVisInstance implements vis.IVisInstance
       var cDomainHigh = [0, r[1]];
       var cDomainLow = [r[0], 0];
 
-      var highScale = d3.scale.linear().domain(cDomainHigh).range(<any[]>['darkred', 'red']);
-      var lowScale = d3.scale.linear().domain(cDomainLow).range(<any[]>['green', 'darkgreen']);
+      var colorScale = d3.scale.linear().domain([r[0], 0, r[1]]).range(<any[]>['green', 'white', 'red']);
 
       var bars = $root.selectAll('rect').data(vec).enter().append('rect');
       bars.attr({
@@ -146,7 +145,7 @@ export class BoxChart extends vis.AVisInstance implements vis.IVisInstance
         'y': (d) => d3.min([zeroLine, yScale(<any>d)]),
         'width': <any>xScale.rangeBand(),
         'height': (d) => d3.max([zeroLine, yScale(<any>d)]) - d3.min([zeroLine, yScale(<any>d)]),
-        'fill': (d) => { if (d < 0) { return lowScale(d); } else { return highScale(d); } }
+        'fill': (d) => { return colorScale(d); }
       });
 
       this.markReady();
