@@ -32,7 +32,7 @@ export class BoxPlot extends vis.AVisInstance implements vis.IVisInstance
 
   get rawSize(): [number, number]
   {
-    return [125,400];
+    return [150,300];
   }
 
   get node()
@@ -213,9 +213,11 @@ export class BoxPlot extends vis.AVisInstance implements vis.IVisInstance
       var xCoords = [offset, offset + boxWidth];
       var xScale = d3.scale.linear().domain([0, 1]).range(xCoords);
 
-      var notchOffsetPerc = 0.1;
-      var notchOffset = xScale(notchOffsetPerc) - xCoords[0];
-      var notchCoords = [xScale(notchOffsetPerc), xScale(1.0 - notchOffsetPerc)];
+
+      var diffQ = Math.min(yScale(median) - yScale(q75), yScale(q25) - yScale(median));
+      var notchOffsetPerc = 0.25;
+      var notchOffset = diffQ * notchOffsetPerc;
+      var notchCoords = [xScale(0) + notchOffset, xScale(1) - notchOffset];
       //console.log(notchOffset);
 
       // draw median line

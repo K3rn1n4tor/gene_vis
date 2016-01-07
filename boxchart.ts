@@ -24,7 +24,7 @@ export class BoxChart extends vis.AVisInstance implements vis.IVisInstance
   {
     super();
     this.options = C.mixin({
-      scale:[5, 2],
+      scale:[1, 1],
       rotate: 0}, options);
 
     this.$node = this.build(d3.select(parent));
@@ -35,7 +35,7 @@ export class BoxChart extends vis.AVisInstance implements vis.IVisInstance
   get rawSize(): [number, number]
   {
     var d = this.data.dim;
-    return [d[0], 100];
+    return [1250, 300];
   }
 
   get node()
@@ -132,10 +132,7 @@ export class BoxChart extends vis.AVisInstance implements vis.IVisInstance
       var value = (<any>this.data.desc).value;
       const r = value.range;
 
-      var cDomainHigh = [0, r[1]];
-      var cDomainLow = [r[0], 0];
-
-      var colorScale = d3.scale.linear().domain([r[0], 0, r[1]]).range(<any[]>['green', 'white', 'red']);
+      var colorScale = d3.scale.linear().domain([r[0], 0, r[1]]).range(<any[]>['green', 'lightgrey', 'red']);
 
       var bars = $root.selectAll('rect').data(vec).enter().append('rect');
       bars.attr({
