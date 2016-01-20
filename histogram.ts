@@ -106,15 +106,22 @@ export class Histogram extends vis.AVisInstance implements vis.IVisInstance
     var numBins = 10;
 
     var range = d3.extent(this.data);
+    var dist = (range[1] - range[0]) / (numBins);
+    var ticks = [];
+
+    for (var i = 0; i < numBins + 1; ++i)
+    {
+      ticks.push(range[0] + i * dist);
+    }
     //var minX = Math.floor(range[0]);
     //var maxX = Math.ceil(range[1]);
     //range = [minX, maxX];
 
     // scales
-    var scaleX = d3.scale.linear().domain(range).range([0, rawSize[0]]).nice(numBins);
+    var scaleX = d3.scale.linear().domain(range).range([0, rawSize[0]]);
     range = <any>scaleX.domain();
 
-    var histo = d3.layout.histogram().bins(scaleX.ticks(numBins)).frequency(true)(this.data);
+    var histo = d3.layout.histogram().bins(ticks).frequency(true)(this.data);
     console.log(histo);
 
     var scaleY = d3.scale.linear()
@@ -127,7 +134,7 @@ export class Histogram extends vis.AVisInstance implements vis.IVisInstance
       });
 
     bars.append('rect').attr({
-      x : 4, width: scaleX(histo[0].dx + range[0]) - 2,
+      x : 4, width: Math.max(scaleX(histo[0].dx + range[0]), 2) - 2,
       height: (d) => rawSize[1] - scaleY(<any>d.y)
     });
 
