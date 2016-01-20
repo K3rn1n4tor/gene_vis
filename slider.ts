@@ -27,7 +27,7 @@ export class DiscreteSlider extends vis.AVisInstance implements vis.IVisInstance
     this.options = C.mixin({
       scale:[1, 1],
       rotate: 0,
-      bins: 10}, options);
+      bins: 20}, options);
 
     this.$node = this.build(d3.select(parent));
     this.$node.datum(data);
@@ -115,8 +115,8 @@ export class DiscreteSlider extends vis.AVisInstance implements vis.IVisInstance
       .attr('transform', 'scale(' + scaling[0] + ',' + scaling[1] + ')');
 
     var barHeight = 5;
-    var sliderWidth = 8;
-    var sliderRadius = 4;
+    var sliderWidth = 6;
+    var sliderRadius = 6;
 
     var that = this;
 
@@ -183,7 +183,7 @@ export class DiscreteSlider extends vis.AVisInstance implements vis.IVisInstance
         y: rawSize[1] / 2 - barHeight / 2, 'height': barHeight, width: rawSize[0], 'fill': '#cccccc'
       });
 
-    var scale = d3.scale.linear().domain(range).range([0, rawSize[0] - sliderWidth / 2]);
+    var scale = d3.scale.linear().domain(range).range([0, rawSize[0] - sliderWidth]);
     var dist = (range[1] - range[0]) / numBins;
     var ticks = d3.range(numBins + 1).map((d) => { return scale(range[0] + <any>d * dist); });
 

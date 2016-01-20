@@ -22,7 +22,8 @@ export class Histogram extends vis.AVisInstance implements vis.IVisInstance
     super();
     this.options = C.mixin({
       scale: [1, 1],
-      rotate: 0}, options);
+      rotate: 0,
+      bins: 20}, options);
 
     this.$node = this.build(d3.select(this.parent));
     this.$node.datum(data);
@@ -104,7 +105,7 @@ export class Histogram extends vis.AVisInstance implements vis.IVisInstance
 
     var $root = $svg.append('g').attr('transform', 'scale(' + scaling[0] + ',' + scaling[1] + ')');
 
-    var numBins = 10;
+    var numBins = this.options.bins;
 
     var range = d3.extent(this.data);
     var dist = (range[1] - range[0]) / (numBins);
