@@ -15,6 +15,7 @@ import C = require('../caleydo_core/main');
 export class Histogram extends vis.AVisInstance implements vis.IVisInstance
 {
   private $node : d3.Selection<any>;
+  private histo : any;
 
   constructor(public data: any, public parent: Element, private options: any)
   {
@@ -121,29 +122,40 @@ export class Histogram extends vis.AVisInstance implements vis.IVisInstance
     var scaleX = d3.scale.linear().domain(range).range([0, rawSize[0]]);
     range = <any>scaleX.domain();
 
-    var histo = d3.layout.histogram().bins(ticks).frequency(true)(this.data);
-    console.log(histo);
+    this.histo = d3.layout.histogram().bins(ticks).frequency(true)(this.data);
+    console.log(this.histo);
 
     var scaleY = d3.scale.linear()
-                  .domain([0, d3.max(histo, (d) => <any>d.y)]).range([rawSize[1] - 1, 0]);
+                  .domain([0, d3.max(this.histo, (d) => (<any>d).y)]).range([rawSize[1], 0]);
 
-    var bars = $root.selectAll('bars').data(histo).enter()
+    var bars = $root.selectAll('bars').data(this.histo).enter()
                 .append('g').attr({
           'class':'bar',
-          'transform': (d) => 'translate(' + scaleX(d.x) + ',' + scaleY(d.y) + ')'
+          'transform': (d) => 'translate(' + scaleX((<any>d).x) + ',' + scaleY((<any>d).y) + ')'
       });
 
     bars.append('rect').attr({
-      x : 4, width: Math.max(scaleX(histo[0].dx + range[0]), 2) - 2,
-      height: (d) => rawSize[1] - scaleY(<any>d.y)
+      x : 2, width: Math.max(scaleX(this.histo[0].dx + range[0]), 2) - 4,
+      height: (d) => rawSize[1] - scaleY((<any>d).y)
     });
 
-    console.log(range);
-    console.log(histo[0].dx);
+    console.log(this.histo);
+    //console.log(this.histo[0].dx);
 
     this.markReady();
 
     return $svg;
+  }
+
+  public getNumBinElements(range : [number, number]) : number
+  {
+    var num = 0;
+    for (var i = range[0]; i < range[1]; ++i)
+    {
+      num += this.histo[i].length;
+    }
+
+    return num;
   }
 }
 

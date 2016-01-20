@@ -115,7 +115,8 @@ export class DiscreteSlider extends vis.AVisInstance implements vis.IVisInstance
       .attr('transform', 'scale(' + scaling[0] + ',' + scaling[1] + ')');
 
     var barHeight = 5;
-    var sliderWidth = 5;
+    var sliderWidth = 8;
+    var sliderRadius = 4;
 
     var that = this;
 
@@ -182,7 +183,7 @@ export class DiscreteSlider extends vis.AVisInstance implements vis.IVisInstance
         y: rawSize[1] / 2 - barHeight / 2, 'height': barHeight, width: rawSize[0], 'fill': '#cccccc'
       });
 
-    var scale = d3.scale.linear().domain(range).range([0, rawSize[0] - sliderWidth]);
+    var scale = d3.scale.linear().domain(range).range([0, rawSize[0] - sliderWidth / 2]);
     var dist = (range[1] - range[0]) / numBins;
     var ticks = d3.range(numBins + 1).map((d) => { return scale(range[0] + <any>d * dist); });
 
@@ -190,7 +191,8 @@ export class DiscreteSlider extends vis.AVisInstance implements vis.IVisInstance
     {
       this.sliders[i] = $root.append('rect').attr({
         x: String(ticks[i]),
-        width: sliderWidth, height: size[1], 'fill': 'steelblue', 'id': 'slider' + String(i)
+        width: sliderWidth, height: size[1], 'fill': 'steelblue', 'id': 'slider' + String(i),
+        rx: sliderRadius, ry: sliderRadius
       });
 
       this.sliders[i].call(drag);
@@ -204,12 +206,12 @@ export class DiscreteSlider extends vis.AVisInstance implements vis.IVisInstance
     return $svg;
   }
 
-  public getIndex(index: number)
+  public getIndex(index: number) : number
   {
     return this.indices[index];
   }
 
-  public getValue(index: number)
+  public getValue(index: number) : number
   {
     return this.values[index];
   }
