@@ -29,6 +29,13 @@ export class DiscreteSlider extends vis.AVisInstance implements vis.IVisInstance
       rotate: 0,
       bins: 20}, options);
 
+    if (this.options.scaleTo)
+    {
+      var scaling = this.options.scaleTo;
+      var raw = this.rawSize;
+      this.options.scale = raw.map((d, i) => { return scaling[i] / d });
+    }
+
     this.$node = this.build(d3.select(parent));
     this.$node.datum(data);
     vis.assignVis(<Element>this.$node.node(), this);
@@ -115,7 +122,7 @@ export class DiscreteSlider extends vis.AVisInstance implements vis.IVisInstance
       .attr('transform', 'scale(' + scaling[0] + ',' + scaling[1] + ')');
 
     var barHeight = 5;
-    var sliderWidth = 6;
+    var sliderWidth = 10;
     var sliderRadius = 6;
 
     var that = this;

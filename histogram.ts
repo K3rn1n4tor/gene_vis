@@ -25,6 +25,13 @@ export class Histogram extends vis.AVisInstance implements vis.IVisInstance
       rotate: 0,
       bins: 20}, options);
 
+    if (this.options.scaleTo)
+    {
+      var scaling = this.options.scaleTo;
+      var raw = this.rawSize;
+      this.options.scale = raw.map((d, i) => { return scaling[i] / d });
+    }
+
     this.$node = this.build(d3.select(this.parent));
     this.$node.datum(data);
     vis.assignVis(<Element>this.$node.node(), this);
@@ -124,7 +131,7 @@ export class Histogram extends vis.AVisInstance implements vis.IVisInstance
     range = <any>scaleX.domain();
 
     this.histo = d3.layout.histogram().bins(ticks).frequency(true)(this.data);
-    console.log(this.histo);
+    //console.log(this.histo);
 
     var scaleY = d3.scale.linear()
                   .domain([0, d3.max(this.histo, (d) => (<any>d).y)]).range([rawSize[1], 0]);
@@ -140,7 +147,7 @@ export class Histogram extends vis.AVisInstance implements vis.IVisInstance
       height: (d) => rawSize[1] - scaleY((<any>d).y)
     });
 
-    console.log(this.histo);
+    //console.log(this.histo);
     //console.log(this.histo[0].dx);
 
     this.markReady();
