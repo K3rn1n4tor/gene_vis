@@ -197,15 +197,15 @@ export class DiscreteSlider extends vis.AVisInstance implements vis.IVisInstance
 
     for (var i = 0; i < this.numSlider; ++i)
     {
+      this.indices[i] = (this.options.starts) ? this.options.starts[i] : i;
       this.sliders[i] = $root.append('rect').attr({
-        x: String(ticks[i]),
+        x: String(ticks[this.indices[i]]),
         width: sliderWidth, height: size[1], 'fill': '#556655', 'id': 'slider' + String(i),
         rx: sliderRadius, ry: sliderRadius
       });
 
       this.sliders[i].call(drag);
 
-      this.indices[i] = i;
       this.values[i] = scale.invert(ticks[i]);
     }
 

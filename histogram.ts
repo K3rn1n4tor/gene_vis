@@ -166,6 +166,24 @@ export class Histogram extends vis.AVisInstance implements vis.IVisInstance
 
     return num;
   }
+
+  // expect something like [{range: [], color: 'any'}, {...}]
+  public colorBars(desc: any)
+  {
+    function colorize(d, i)
+    {
+      for(var j = 0; j < desc.length; ++j)
+      {
+        var colDesc = desc[j];
+        if (i < colDesc.range[1] && i >= colDesc.range[0])
+        {
+          return colDesc.color;
+        }
+      }
+    }
+
+    this.$node.selectAll('rect').attr('fill', colorize);
+  }
 }
 
 export function create(data: any, parent: Element, options: any) : vis.AVisInstance
