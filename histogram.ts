@@ -144,7 +144,8 @@ export class Histogram extends vis.AVisInstance implements vis.IVisInstance
 
     bars.append('rect').attr({
       x : 2, width: Math.max(scaleX(this.histo[0].dx + range[0]), 2) - 4,
-      height: (d) => rawSize[1] - scaleY((<any>d).y)
+      height: (d) => rawSize[1] - scaleY((<any>d).y),
+      'fill': '#334433'
     });
 
     //console.log(this.histo);

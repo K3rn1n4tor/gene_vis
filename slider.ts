@@ -112,7 +112,7 @@ export class DiscreteSlider extends vis.AVisInstance implements vis.IVisInstance
     var $svg = $parent.append('svg').attr({
       width: size[0],
       height: size[1],
-      'class': 'slider'
+      'class': 'slider',
     });
 
     var range = d3.extent(this.data);
@@ -187,10 +187,11 @@ export class DiscreteSlider extends vis.AVisInstance implements vis.IVisInstance
       .on('drag', dragMove);
 
     var bar = $root.append('rect').attr({
-        y: rawSize[1] / 2 - barHeight / 2, 'height': barHeight, width: rawSize[0], 'fill': '#cccccc'
+        x: 2, y: rawSize[1] / 2 - barHeight / 2, 'height': barHeight,
+        width: rawSize[0] - 2, 'fill': '#bbccbb'
       });
 
-    var scale = d3.scale.linear().domain(range).range([0, rawSize[0] - sliderWidth]);
+    var scale = d3.scale.linear().domain(range).range([2, rawSize[0] - sliderWidth]);
     var dist = (range[1] - range[0]) / numBins;
     var ticks = d3.range(numBins + 1).map((d) => { return scale(range[0] + <any>d * dist); });
 
@@ -198,7 +199,7 @@ export class DiscreteSlider extends vis.AVisInstance implements vis.IVisInstance
     {
       this.sliders[i] = $root.append('rect').attr({
         x: String(ticks[i]),
-        width: sliderWidth, height: size[1], 'fill': 'steelblue', 'id': 'slider' + String(i),
+        width: sliderWidth, height: size[1], 'fill': '#556655', 'id': 'slider' + String(i),
         rx: sliderRadius, ry: sliderRadius
       });
 
