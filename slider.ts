@@ -115,101 +115,105 @@ export class DiscreteSlider extends vis.AVisInstance implements vis.IVisInstance
       'class': 'slider',
     });
 
-    var range = d3.extent(this.data);
-    var numBins = this.options.bins;
-
-    var $root = $svg.append('g')
-      .attr('transform', 'scale(' + scaling[0] + ',' + scaling[1] + ')');
-
-    var barHeight = 5;
-    var sliderWidth = 10;
-    var sliderRadius = 6;
-
     var that = this;
 
-    function dragMove(d)
+    this.data.data().then(function(vec)
     {
-      var x = d3.event.x;
+      var range = d3.extent(vec);
+      var numBins = that.options.bins;
 
-      var id = d3.select(<any>this).attr('id');
-      var number = parseInt(id.slice(-1));
-      var pos = Math.max(0, Math.min(rawSize[0] - sliderWidth, Math.max(0, x)));
+      var $root = $svg.append('g')
+        .attr('transform', 'scale(' + scaling[0] + ',' + scaling[1] + ')');
 
-      var borders = [0, numBins + 1];
+      var barHeight = 5;
+      var sliderWidth = 10;
+      var sliderRadius = 6;
 
-      if (that.numSlider > 1)
+      function dragMove(d)
       {
-        if (number == that.numSlider - 1)
-        {
-          borders = [that.indices[number - 1] + 1, numBins];
-        }
-        else if (number == 0)
-        {
-          borders = [0, that.indices[number + 1] - 1];
-        }
-        else
-        {
-          borders = [that.indices[number - 1] + 1, that.indices[number + 1] - 1];
-        }
+        var x = d3.event.x;
 
-        var nearestIndex = nearestTickIndex(pos, borders);
-        that.indices[number] = nearestIndex;
-        that.values[number] = scale.invert(ticks[nearestIndex]);
-        d3.select(this).attr('x', ticks[nearestIndex]);
+        var id = d3.select(<any>this).attr('id');
+        var number = parseInt(id.slice(-1));
+        var pos = Math.max(0, Math.min(rawSize[0] - sliderWidth, Math.max(0, x)));
+
+        var borders = [0, numBins + 1];
+
+        if (that.numSlider > 1)
+        {
+          if (number == that.numSlider - 1)
+          {
+            borders = [that.indices[number - 1] + 1, numBins];
+          }
+          else if (number == 0)
+          {
+            borders = [0, that.indices[number + 1] - 1];
+          }
+          else
+          {
+            borders = [that.indices[number - 1] + 1, that.indices[number + 1] - 1];
+          }
+
+          var nearestIndex = nearestTickIndex(pos, borders);
+          that.indices[number] = nearestIndex;
+          that.values[number] = scale.invert(ticks[nearestIndex]);
+          d3.select(this).attr('x', ticks[nearestIndex]);
+        }
       }
-    }
 
-   function nearestTickIndex(pos, borders)
-    {
-      var dists = ticks.map(function(d) { return d - pos; });
-      //console.log(dists);
-
-      var index = 0;
-      var dist = -(ticks[1] - ticks[0]) / 2;
-
-      while (dists[index] < dist)
+     function nearestTickIndex(pos, borders)
       {
-        index++;
+        var dists = ticks.map(function(d) { return d - pos; });
+        //console.log(dists);
+
+        var index = 0;
+        var dist = -(ticks[1] - ticks[0]) / 2;
+
+        while (dists[index] < dist)
+        {
+          index++;
+        }
+
+        return Math.min(borders[1], Math.max(borders[0], index));
       }
 
-      return Math.min(borders[1], Math.max(borders[0], index));
-    }
+      function originFunc() : any
+      {
+        var that = <any>this;
+        var obj = d3.select(that);
+        return { x: <any>obj.attr('x'), y: <any>obj.attr('y') };
+      }
 
-    function originFunc() : any
-    {
-      var that = <any>this;
-      var obj = d3.select(that);
-      return { x: <any>obj.attr('x'), y: <any>obj.attr('y') };
-    }
+      var drag = d3.behavior.drag()
+        .origin(originFunc)
+        .on('drag', dragMove);
 
-    var drag = d3.behavior.drag()
-      .origin(originFunc)
-      .on('drag', dragMove);
+      var bar = $root.append('rect').attr({
+          x: 2, y: rawSize[1] / 2 - barHeight / 2, 'height': barHeight,
+          width: rawSize[0] - 2, 'fill': '#bbccbb'
+        });
 
-    var bar = $root.append('rect').attr({
-        x: 2, y: rawSize[1] / 2 - barHeight / 2, 'height': barHeight,
-        width: rawSize[0] - 2, 'fill': '#bbccbb'
-      });
+      var scale = d3.scale.linear().domain(range).range([2, rawSize[0] - sliderWidth]);
+      var dist = (range[1] - range[0]) / numBins;
+      var ticks = d3.range(numBins + 1).map((d) => { return scale(range[0] + <any>d * dist); });
 
-    var scale = d3.scale.linear().domain(range).range([2, rawSize[0] - sliderWidth]);
-    var dist = (range[1] - range[0]) / numBins;
-    var ticks = d3.range(numBins + 1).map((d) => { return scale(range[0] + <any>d * dist); });
+      for (var i = 0; i < that.numSlider; ++i)
+      {
+        that.indices[i] = (that.options.starts) ? that.options.starts[i] : i;
+        that.sliders[i] = $root.append('rect').attr({
+          x: String(ticks[that.indices[i]]),
+          width: sliderWidth, height: size[1], 'fill': '#556655', 'id': 'slider' + String(i),
+          rx: sliderRadius, ry: sliderRadius
+        });
 
-    for (var i = 0; i < this.numSlider; ++i)
-    {
-      this.indices[i] = (this.options.starts) ? this.options.starts[i] : i;
-      this.sliders[i] = $root.append('rect').attr({
-        x: String(ticks[this.indices[i]]),
-        width: sliderWidth, height: size[1], 'fill': '#556655', 'id': 'slider' + String(i),
-        rx: sliderRadius, ry: sliderRadius
-      });
+        that.sliders[i].call(drag);
 
-      this.sliders[i].call(drag);
+        that.values[i] = scale.invert(ticks[i]);
+      }
 
-      this.values[i] = scale.invert(ticks[i]);
-    }
+      that.markReady();
 
-    this.markReady();
+    });
 
     return $svg;
   }
@@ -225,7 +229,7 @@ export class DiscreteSlider extends vis.AVisInstance implements vis.IVisInstance
   }
 }
 
-export function create(data: any, parent: Element, numSlider: number, options: any) : vis.AVisInstance
+export function create(data: vector.IVector, parent: Element, numSlider: number, options: any) : vis.AVisInstance
 {
   return new DiscreteSlider(data, parent, numSlider, options)
 }

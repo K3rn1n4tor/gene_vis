@@ -12,10 +12,33 @@ import geom = require('../caleydo_core/geom');
 import ranges = require('../caleydo_core/range');
 import C = require('../caleydo_core/main');
 
+class ProxyMetaData implements vis.IVisMetaData {
+  constructor(private proxy : () => vis.IVisMetaData) {
+
+  }
+
+  get scaling() {
+    var p = this.proxy();
+    return p ? p.scaling : 'free';
+  }
+
+  get rotation() {
+    const p = this.proxy();
+    return p ? p.rotation : 0;
+  }
+
+  get sizeDependsOnDataDimension() {
+    const p = this.proxy();
+    return p ? p.sizeDependsOnDataDimension : [false, false];
+  }
+}
+
 export class Histogram extends vis.AVisInstance implements vis.IVisInstance
 {
   private $node : d3.Selection<any>;
   private histo : any;
+  private actDesc: vis.IVisPluginDesc;
+  private metaData : vis.IVisMetaData = new ProxyMetaData(() => this.actDesc);
 
   constructor(public data: any, public parent: Element, private options: any)
   {
@@ -45,6 +68,14 @@ export class Histogram extends vis.AVisInstance implements vis.IVisInstance
   get node()
   {
     return <Element>this.$node.node();
+  }
+
+  /**
+   * converts this multiform to a vis metadata
+   * @return {vis.IVisMetaData}
+   */
+  get asMetaData() {
+    return this.metaData;
   }
 
    option(name: string, val?: any)
@@ -113,45 +144,49 @@ export class Histogram extends vis.AVisInstance implements vis.IVisInstance
     var $root = $svg.append('g').attr('transform', 'scale(' + scaling[0] + ',' + scaling[1] + ')');
 
     var numBins = this.options.bins;
+    var that = this;
 
-    var range = d3.extent(this.data);
-    var dist = (range[1] - range[0]) / (numBins);
-    var ticks = [];
-
-    for (var i = 0; i < numBins + 1; ++i)
+    this.data.data().then(function(vec)
     {
-      ticks.push(range[0] + i * dist);
-    }
-    //var minX = Math.floor(range[0]);
-    //var maxX = Math.ceil(range[1]);
-    //range = [minX, maxX];
 
-    // scales
-    var scaleX = d3.scale.linear().domain(range).range([0, rawSize[0]]);
-    range = <any>scaleX.domain();
+      var range = d3.extent(vec);
+      var dist = (range[1] - range[0]) / (numBins);
+      var ticks = [];
 
-    this.histo = d3.layout.histogram().bins(ticks).frequency(true)(this.data);
-    //console.log(this.histo);
+      for (var i = 0; i < numBins + 1; ++i) {
+        ticks.push(range[0] + i * dist);
+      }
+      //var minX = Math.floor(range[0]);
+      //var maxX = Math.ceil(range[1]);
+      //range = [minX, maxX];
 
-    var scaleY = d3.scale.linear()
-                  .domain([0, d3.max(this.histo, (d) => (<any>d).y)]).range([rawSize[1], 0]);
+      // scales
+      var scaleX = d3.scale.linear().domain(range).range([0, rawSize[0]]);
+      range = <any>scaleX.domain();
 
-    var bars = $root.selectAll('bars').data(this.histo).enter()
-                .append('g').attr({
-          'class':'bar',
+      that.histo = d3.layout.histogram().bins(ticks).frequency(true)(vec);
+      //console.log(this.histo);
+
+      var scaleY = d3.scale.linear()
+        .domain([0, d3.max(that.histo, (d) => (<any>d).y)]).range([rawSize[1], 0]);
+
+      var bars = $root.selectAll('bars').data(that.histo).enter()
+        .append('g').attr({
+          'class': 'bar',
           'transform': (d) => 'translate(' + scaleX((<any>d).x) + ',' + scaleY((<any>d).y) + ')'
+        });
+
+      bars.append('rect').attr({
+        x: 2, width: Math.max(scaleX(that.histo[0].dx + range[0]), 2) - 4,
+        height: (d) => rawSize[1] - scaleY((<any>d).y),
+        'fill': '#334433'
       });
 
-    bars.append('rect').attr({
-      x : 2, width: Math.max(scaleX(this.histo[0].dx + range[0]), 2) - 4,
-      height: (d) => rawSize[1] - scaleY((<any>d).y),
-      'fill': '#334433'
+      //console.log(this.histo);
+      //console.log(this.histo[0].dx);
+
+      that.markReady();
     });
-
-    //console.log(this.histo);
-    //console.log(this.histo[0].dx);
-
-    this.markReady();
 
     return $svg;
   }
@@ -186,7 +221,7 @@ export class Histogram extends vis.AVisInstance implements vis.IVisInstance
   }
 }
 
-export function create(data: any, parent: Element, options: any) : vis.AVisInstance
+export function create(data: vector.IVector, parent: Element, options: any) : vis.AVisInstance
 {
   return new Histogram(data, parent, options);
 }
