@@ -12,33 +12,10 @@ import geom = require('../caleydo_core/geom');
 import ranges = require('../caleydo_core/range');
 import C = require('../caleydo_core/main');
 
-class ProxyMetaData implements vis.IVisMetaData {
-  constructor(private proxy : () => vis.IVisMetaData) {
-
-  }
-
-  get scaling() {
-    var p = this.proxy();
-    return p ? p.scaling : 'free';
-  }
-
-  get rotation() {
-    const p = this.proxy();
-    return p ? p.rotation : 0;
-  }
-
-  get sizeDependsOnDataDimension() {
-    const p = this.proxy();
-    return p ? p.sizeDependsOnDataDimension : [false, false];
-  }
-}
-
 export class Histogram extends vis.AVisInstance implements vis.IVisInstance
 {
   private $node : d3.Selection<any>;
   private histo : any;
-  private actDesc: vis.IVisPluginDesc;
-  private metaData : vis.IVisMetaData = new ProxyMetaData(() => this.actDesc);
 
   constructor(public data: any, public parent: Element, private options: any)
   {
@@ -70,15 +47,7 @@ export class Histogram extends vis.AVisInstance implements vis.IVisInstance
     return <Element>this.$node.node();
   }
 
-  /**
-   * converts this multiform to a vis metadata
-   * @return {vis.IVisMetaData}
-   */
-  get asMetaData() {
-    return this.metaData;
-  }
-
-   option(name: string, val?: any)
+  option(name: string, val?: any)
   {
     if (arguments.length === 1)
     {
