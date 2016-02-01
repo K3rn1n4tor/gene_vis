@@ -288,7 +288,7 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
 
         var nearestIndex = nearestTickIndex(pos, borders);
         that.divisions[number] = nearestIndex;
-        d3.select(this).transition().duration(this.options.animationTime).attr('x', scaleX(ticks[nearestIndex]));
+        d3.select(this).transition().duration(that.options.animationTime).attr('x', scaleX(ticks[nearestIndex]));
         that._colorizeBars();
 
       }
