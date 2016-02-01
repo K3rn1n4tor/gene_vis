@@ -46,12 +46,12 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
         scale: [1, 1],
         rotate: 0,
         bins: 20,
-        padding: 6,
+        padding: 8,
         barColor: '#334433',
         barOffsetRatio: 0.05,
         sliderStarts: [1, 3],
         numSlider: 2,
-        sliderColor: 'grey'
+        sliderColor: 'grey',
       }, options);
 
     if (this.options.scaleTo)
@@ -253,7 +253,12 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
 
     var that = this;
 
-    // define dragging movement function
+     // -----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Drag movement behavior of the sliders.
+     * @param d
+       */
     function dragMove(d: any)
     {
       var x = d3.event.x;
@@ -262,7 +267,7 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
       var number = parseInt(id.slice(-1));
       var pos = Math.max(0, Math.min(rawSize[0] - that.options.padding, Math.max(0, x)));
 
-      var borders = [0, numBins + 1];
+      var borders = [0, numBins];
 
       if (that.options.numSlider > 1)
       {
@@ -281,32 +286,37 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
 
         var nearestIndex = nearestTickIndex(pos, borders);
         that.divisions[number] = nearestIndex;
-        d3.select(this).attr('x', scaleX(ticks[nearestIndex]));
+        d3.select(this).transition().duration(40).attr('x', scaleX(ticks[nearestIndex]));
         that._colorizeBars();
 
       }
-      d3.event.stopPropagation();
     }
 
+    // -----------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Find the tick / bar in the histogram nearest to the currently selected slider position. Set the slider to this
+     * tick and update its index.
+     * @param pos
+     * @param borders
+     * @returns {number}
+       */
     function nearestTickIndex(pos: number, borders: number[])
     {
       var dists = ticks.map(function(d) { return scaleX(d) - pos; });
-      console.log(dists);
 
       var index = 0;
-      var dist = - scaleX(ticks[1] - ticks[0]);
+      var tickDist = scaleX(ticks[1]) - scaleX(ticks[0]);
+      var threshold = -tickDist / 2.0;
 
-      while (dists[index] < dist)
-      {
-        index++;
-      }
+      while (dists[index] < threshold) { index++; }
 
       return Math.min(borders[1], Math.max(borders[0], index));
     }
 
     function originFunc() : any
     {
-      var obj: any = d3.select(this);
+      var obj: d3.Selection<any> = d3.select(this);
       return { x: obj.attr('x'), y: obj.attr('y') };
     }
 
@@ -369,7 +379,7 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
       }
     }
 
-    this.$node.selectAll('#histoBar').attr('fill', colorize);
+    this.$node.selectAll('#histoBar').transition().duration(40).attr('fill', colorize);
   }
 
   // -------------------------------------------------------------------------------------------------------------------
