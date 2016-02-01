@@ -228,7 +228,6 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
         'fill': this.options.barColor, id: 'histoBar'
       });
 
-    this.markReady();
   }
 
   // -------------------------------------------------------------------------------------------------------------------
@@ -386,6 +385,62 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
 
   /**
    *
+   * @returns {Array}
+   * @private
+     */
+  private _getNumElementsPerBin() : number[]
+  {
+    var numElements = [];
+    var numEntries = this.options.numSlider + 1;
+
+    for (var i = 0; i < numEntries; ++i)
+    {
+      var sum = 0;
+      var index = (i == 0) ? 0 : this.divisions[i - 1];
+      var maxIndex = (i == numEntries - 1) ? this.options.bins : this.divisions[i];
+      while(index < maxIndex)
+      {
+        sum += this.bars[index].lenght;
+        index++;
+      }
+
+      numElements.push(sum);
+    }
+
+    return numElements;
+  }
+
+  // -------------------------------------------------------------------------------------------------------------------
+
+  /**
+   *
+   * @returns {Array}
+     */
+  getDivisionRanges() : any[]
+  {
+    var numElements = this._getNumElementsPerBin();
+    var numRanges = this.options.numSlider + 1;
+    var ranges = [];
+
+    var total = 0;
+
+    for (var j = 0; j < numRanges; ++j)
+    {
+      var num = numElements[j];
+
+      var arr = Array.apply(null, Array(num)).map((_ : any, i : number) => { return total + i });
+      ranges.push(arr);
+
+      total += num;
+    }
+
+    return ranges;
+  }
+
+  // -------------------------------------------------------------------------------------------------------------------
+
+  /**
+   *
    * @param $parent
    * @returns {Selection<any>}
      */
@@ -410,6 +465,8 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
       that._buildHistogram($root, vec, rawSize);
       that._buildSlider($root, vec, rawSize);
       that._colorizeBars();
+
+      that.markReady();
     });
 
     return $svg;
