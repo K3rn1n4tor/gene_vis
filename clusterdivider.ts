@@ -34,11 +34,13 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
   /**
    *
    * @param histoData
+   * @param labels
    * @param data
    * @param parent
    * @param options
      */
-  constructor(public histoData: any, public data: any, public parent: Element, private options: any)
+  constructor(public histoData: any, public labels: number[],
+              public data: any, public parent: Element, private options: any)
   {
     super();
     this.options = C.mixin(
@@ -400,7 +402,7 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
       var maxIndex = (i == numEntries - 1) ? this.options.bins : this.divisions[i];
       while(index < maxIndex)
       {
-        sum += this.bars[index].lenght;
+        sum += this.bars[index].length;
         index++;
       }
 
@@ -471,6 +473,16 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
 
     return $svg;
   }
+
+  // ------------------------------------------------------------------------------------------------------------------
+
+  /**
+   * destroys the node of this object
+   */
+  destroy()
+  {
+    this.$node.remove();
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -484,7 +496,8 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
  * @param options
  * @returns {ClusterDivider}
  */
-export function create(histoData: vector.IVector, data: matrix.IMatrix, parent: Element, options: any) : vis.AVisInstance
+export function create(histoData: vector.IVector, labels: number[],
+                       data: matrix.IMatrix, parent: Element, options: any) : vis.AVisInstance
 {
-  return new ClusterDivider(histoData, data, parent, options);
+  return new ClusterDivider(histoData, labels, data, parent, options);
 }
