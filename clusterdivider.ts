@@ -45,15 +45,16 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
     super();
     this.options = C.mixin(
       {
-        scale: [1, 1],
-        rotate: 0,
-        bins: 20,
-        padding: 8,
-        barColor: '#334433',
-        barOffsetRatio: 0.05,
-        sliderStarts: [1, 3],
-        numSlider: 2,
-        sliderColor: 'grey',
+        scale: [1, 1], // scaling of the svg element
+        rotate: 0, // rotation degree
+        bins: 20, // number of bins
+        padding: 8, // padding between each histogram bar <-> width of slider
+        barColor: '#334433', // default color of bars
+        barOffsetRatio: 0.05, // vertical offset of histogram bars
+        sliderStarts: [1, 3], // start indices of the sliders
+        numSlider: 2, // number of sliders
+        sliderColor: 'grey', // color of the sliders
+        animationTime: 50 // animation time duration
       }, options);
 
     if (this.options.scaleTo)
@@ -287,7 +288,7 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
 
         var nearestIndex = nearestTickIndex(pos, borders);
         that.divisions[number] = nearestIndex;
-        d3.select(this).transition().duration(40).attr('x', scaleX(ticks[nearestIndex]));
+        d3.select(this).transition().duration(this.options.animationTime).attr('x', scaleX(ticks[nearestIndex]));
         that._colorizeBars();
 
       }
@@ -380,7 +381,7 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
       }
     }
 
-    this.$node.selectAll('#histoBar').transition().duration(40).attr('fill', colorize);
+    this.$node.selectAll('#histoBar').transition().duration(this.options.animationTime).attr('fill', colorize);
   }
 
   // -------------------------------------------------------------------------------------------------------------------
@@ -430,8 +431,7 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
     {
       var num = numElements[j];
 
-      var arr = Array.apply(null, Array(num)).map((_ : any, i : number) => { return total + i });
-      ranges.push(arr);
+      ranges.push(this.labels.slice(total, num + total));
 
       total += num;
     }
