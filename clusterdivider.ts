@@ -17,6 +17,16 @@ import geom = require('../caleydo_core/geom');
 import ranges = require('../caleydo_core/range');
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// solarized colors
+// see --> http://ethanschoonover.com/solarized
+
+var red = '#dc322f';
+var yellow = '#b58900';
+var orange = '#cb4b16';
+var green = '#859900';
+var cyan = '#2aa198';
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // class declaration
 
 /**
@@ -28,6 +38,7 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
   private divisions: number[] = [];
   private bars: any[];
   private sliders: d3.Selection<any>[] = [];
+  private changed: boolean = false;
 
   // -------------------------------------------------------------------------------------------------------------------
 
@@ -89,6 +100,19 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
   get node()
   {
     return <Element>this.$node.node();
+  }
+
+  // -------------------------------------------------------------------------------------------------------------------
+
+  /**
+   * Signals if any of the slider was moved
+   * @returns {boolean}
+     */
+  hasChanged(): boolean
+  {
+    var changed = this.changed;
+    this.changed = false;
+    return changed;
   }
 
   // -------------------------------------------------------------------------------------------------------------------
@@ -287,10 +311,15 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
         }
 
         var nearestIndex = nearestTickIndex(pos, borders);
+
+        if (nearestIndex != that.divisions[number])
+        {
+          that.changed = true;
+        }
+
         that.divisions[number] = nearestIndex;
         d3.select(this).transition().duration(that.options.animationTime).attr('x', scaleX(ticks[nearestIndex]));
         that._colorizeBars();
-
       }
     }
 
@@ -354,7 +383,7 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
   private _colorizeBars()
   {
     var descs: any[] = [];
-    var colors = ['darkgreen', 'darkorange', 'darkred'];
+    var colors = ['darkgreen', '#aa8800', 'darkred'];
 
     // build descriptions
     for (var i = 0; i < this.options.numSlider + 1; ++i)
