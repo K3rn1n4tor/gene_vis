@@ -78,6 +78,7 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
     this.$node = this.build(d3.select(this.parent));
     this.$node.datum(histoData);
     vis.assignVis(<Element>this.$node.node(), this);
+    this._colorizeBars();
   }
 
   // -------------------------------------------------------------------------------------------------------------------
@@ -491,16 +492,27 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
     const that = this;
 
     // obtain data for the histogram
-    this.histoData.data().then(function(vec)
+    if (this.histoData instanceof Array)
     {
-      that._buildHistogram($root, vec, rawSize);
-      that._buildSlider($root, vec, rawSize);
-      that._colorizeBars();
-
-      that.markReady();
-    });
+      this._buildComponents($root, this.histoData, rawSize);
+    }
+    else
+    {
+      this.histoData.data().then(function(vec)
+      {
+        that._buildComponents($root, vec, rawSize);
+      });
+    }
 
     return $svg;
+  }
+
+  private _buildComponents($root: d3.Selection<any>, vec: any, rawSize: [number, number])
+  {
+      this._buildHistogram($root, vec, rawSize);
+      this._buildSlider($root, vec, rawSize);
+
+      this.markReady();
   }
 
   // -------------------------------------------------------------------------------------------------------------------
@@ -527,6 +539,12 @@ export class ClusterDivider extends vis.AVisInstance implements vis.IVisInstance
  */
 export function create(histoData: vector.IVector, labels: number[],
                        data: matrix.IMatrix, parent: Element, options: any) : vis.AVisInstance
+{
+  return new ClusterDivider(histoData, labels, data, parent, options);
+}
+
+export function createFromArray(histoData: Array<any>, labels: number[],
+                                data: matrix.IMatrix, parent: Element, options: any) : vis.AVisInstance
 {
   return new ClusterDivider(histoData, labels, data, parent, options);
 }
