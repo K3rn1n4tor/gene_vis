@@ -35,6 +35,14 @@
           "file": "boxplot",
           "filter": "vector",
           "icon": "icon.svg"
+        },
+        {
+          "type": "vis",
+          "id": "caleydo-vis-clusterdivider",
+          "name": "Cluster Divider",
+          "file": "clusterdivider",
+          "filter": "vector",
+          "icon": "icon.svg"
         }
       ]
     },
