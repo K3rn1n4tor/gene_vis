@@ -43,6 +43,14 @@
           "file": "clusterdivider",
           "filter": "vector",
           "icon": "icon.svg"
+        },
+        {
+          "type": "vis",
+          "id": "caleydo-vis-boxslider",
+          "name": "Box Divider",
+          "file": "boxslider",
+          "filter": "vector",
+          "icon": "icon.svg"
         }
       ]
     },
