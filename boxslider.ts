@@ -160,12 +160,21 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 
     const that = this;
 
-    this.data.data().then( (vec: any) =>
+    if (this.data instanceof Array)
     {
-      that.buildBoxPlot($root, vec);
+      that.buildBoxPlot($root, this.data);
 
       that.markReady();
-    });
+    }
+    else
+    {
+      this.data.data().then( (vec: any) =>
+      {
+        that.buildBoxPlot($root, vec);
+
+        that.markReady();
+      });
+    }
 
     return $svg;
   }
@@ -176,25 +185,37 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 
     const rawSize = this.rawSize;
 
+    const numSum = 10;
     const numElems = vec.length;
-    const barHeight = rawSize[1] / numElems;
+    const numBars = numElems / numSum;
+    const barHeight = rawSize[1] / numBars;
 
-    var range = d3.extent(vec);
+    var avgVec = [];
 
-    var scaleY = d3.scale.linear().domain([0, numElems - 1]).range([0, rawSize[1] - barHeight]);
+    for (var i = 0; i < numBars; ++i)
+    {
+      var startIndex = i * numSum;
+      var endIndex = Math.min(startIndex + numSum, vec.length);
+      var subSlice = vec.slice(startIndex, endIndex);
+      avgVec.push(d3.mean(subSlice));
+    }
+
+    var range = d3.extent(avgVec);
+
+    var scaleY = d3.scale.linear().domain([0, numBars - 1]).range([0, rawSize[1] - barHeight]);
     var scaleX = d3.scale.linear().domain(range).range([5, rawSize[0]]);
 
     // create groups that contain the bars
-    var bars = $root.selectAll('g').data(vec)
+    var bars = $root.selectAll('g').data(avgVec)
       .enter().append('g').attr({
-        class: 'bar', 'transform': (_: any, i: number) => { return 'translate(0, ' + scaleY(i) + ')'; }
+        class: 'bar', 'transform': (d: any, i: number) => { return 'translate(0, ' + scaleY(i) + ')'; }
       });
 
     // create the bars
     bars.append('rect').attr({
       x: 0, y: 0,
       width: (d: any) => { return scaleX(d); }, height: barHeight,
-      'fill': 'darkgreen', id: 'bar'
+      'fill': 'steelblue', id: 'bar'
     });
   }
 
@@ -220,6 +241,11 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
  * @returns {ClusterDivider}
  */
 export function create(data: vector.IVector, parent: Element, options: any) : vis.AVisInstance
+{
+  return new BoxSlider(data, parent, options);
+}
+
+export function createRaw(data: Array<any>, parent: Element, options: any) : vis.AVisInstance
 {
   return new BoxSlider(data, parent, options);
 }
