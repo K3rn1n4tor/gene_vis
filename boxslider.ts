@@ -19,6 +19,11 @@ import ranges = require('../caleydo_core/range');
 export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 {
   private $node: d3.Selection<any>;
+  private divisions: any[] = [];
+  private changed = false;
+  private numBars = 0;
+  private sliders: any[] = [];
+  private labels: any[] = [];
 
   constructor(public data: any, public parent: Element, private options: any)
   {
@@ -26,9 +31,11 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
     this.options = C.mixin({
       scale: [1, 1],
       rotate: 0,
+      numAvg: 10,
       numSlider: 2,
       sliderColor: 'grey',
-      animationTime: 50
+      sliderStarts: [1,3],
+      animationTime: 50,
     }, options);
 
     if (this.options.scaleTo)
@@ -41,6 +48,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
     this.$node = this.build(d3.select(this.parent));
     this.$node.datum(data);
     vis.assignVis(<Element>this.$node.node(), this);
+    this.colorizeBars();
   }
 
   // -------------------------------------------------------------------------------------------------------------------
@@ -67,6 +75,15 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 
   // -------------------------------------------------------------------------------------------------------------------
 
+  hasChanged()
+  {
+    var temp = this.changed;
+    this.changed = false;
+    return temp;
+  }
+
+  // -------------------------------------------------------------------------------------------------------------------
+
   /**
    *
    * @param name
@@ -85,6 +102,13 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
       this.fire('option.'+name, val, this.options[name]);
       this.options[name] = val;
     }
+  }
+
+  // -------------------------------------------------------------------------------------------------------------------
+
+  setLabels(labels: any[])
+  {
+    this.labels = labels;
   }
 
   // -------------------------------------------------------------------------------------------------------------------
@@ -160,19 +184,23 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 
     const that = this;
 
-    if (this.data instanceof Array)
+    function buildComponents(vec: any)
     {
-      that.buildBoxPlot($root, this.data);
+      that.buildBoxPlot($root, that.data);
+      that.buildSlider($root, that.data);
 
       that.markReady();
+    }
+
+    if (this.data instanceof Array)
+    {
+      buildComponents(this.data);
     }
     else
     {
       this.data.data().then( (vec: any) =>
       {
-        that.buildBoxPlot($root, vec);
-
-        that.markReady();
+        buildComponents(vec);
       });
     }
 
@@ -185,17 +213,17 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 
     const rawSize = this.rawSize;
 
-    const numSum = 10;
     const numElems = vec.length;
-    const numBars = numElems / numSum;
+    const numBars = numElems / this.options.numAvg;
+    this.numBars = numBars;
     const barHeight = rawSize[1] / numBars;
 
     var avgVec = [];
 
     for (var i = 0; i < numBars; ++i)
     {
-      var startIndex = i * numSum;
-      var endIndex = Math.min(startIndex + numSum, vec.length);
+      var startIndex = i * this.options.numAvg;
+      var endIndex = Math.min(startIndex + this.options.numAvg, vec.length);
       var subSlice = vec.slice(startIndex, endIndex);
       avgVec.push(d3.mean(subSlice));
     }
@@ -217,6 +245,129 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
       width: (d: any) => { return scaleX(d); }, height: barHeight,
       'fill': 'steelblue', id: 'bar'
     });
+  }
+
+  private buildSlider($root: d3.Selection<any>, vec: any)
+  {
+    const that = this;
+
+    const rawSize = this.rawSize;
+    const size = this.size;
+
+    const barHeight = 5 * rawSize[1] / size[1];//rawSize[1] / numBars;
+    const barCover = 3 * barHeight;
+
+    var scaleY = d3.scale.linear().domain([0, this.numBars]).range([0, rawSize[1]]);
+
+    function onDragMove(d: any)
+    {
+      // relative to group
+      var posY = d3.event.y;
+      //console.log(d3.event);
+
+      var id = d3.select(this).attr('id');
+      var number = parseInt(id.slice(-1));
+      var index = that.divisions[number];
+      var oldPosY = scaleY(index) - barCover / 2;
+
+      posY = Math.min(rawSize[1], Math.max(0, posY + oldPosY));
+
+      var newIndex = d3.round(scaleY.invert(posY));
+
+      // define borders
+      var borders = [0, this.numBars];
+      if (that.options.numSlider > 1)
+      {
+        var leftIndex = (number == 0) ? 0 :  that.divisions[number - 1] + 1;
+        var rightIndex = (number == that.options.numSlider - 1) ? that.numBars : that.divisions[number + 1] - 1;
+        borders = [leftIndex, rightIndex];
+      }
+
+      newIndex = Math.min(borders[1], Math.max(borders[0], newIndex));
+
+      if (newIndex != index)
+      {
+        that.sliders[number].attr('transform', 'translate(0,' + (scaleY(newIndex)  - barCover / 2) + ')');
+        that.divisions[number] = newIndex;
+        that.changed = true;
+      }
+
+      that.colorizeBars();
+    }
+
+    //function originFunc() : any
+    //{
+    //  var obj: d3.Selection<any> = d3.select(this);
+    //  return { x: obj.attr('x'), y: obj.attr('y') };
+    //}
+
+    var dragSlider = d3.behavior.drag()
+      //.origin(originFunc)
+      .on('drag', onDragMove);
+
+    for (var i = 0; i < this.options.numSlider; ++i)
+    {
+      const sliderIndex = this.options.sliderStarts[i];
+      const sliderRadius = 2;
+
+      var group = $root.append('g').attr(
+      {
+        id: 'group' + String(i),
+        'transform': 'translate(0,' + (scaleY(sliderIndex) - barCover / 2) + ')',
+      });
+
+      var container = group.append('rect').attr(
+      {
+        id: 'slider' + String(i),
+        width: rawSize[0], height: barCover, opacity: 0
+      });
+
+      var slider = group.append('rect').attr(
+      {
+        id: 'slider' + String(i),
+        y: barCover / 2 - barHeight / 2, height: barHeight, width: rawSize[0], fill: that.options.sliderColor,
+        rx: sliderRadius, ry: sliderRadius
+      });
+
+      container.call(dragSlider);
+      slider.call(dragSlider);
+      this.sliders.push(group);
+      this.divisions.push(sliderIndex);
+    }
+  }
+
+  // -------------------------------------------------------------------------------------------------------------------
+
+  private colorizeBars()
+  {
+    var descs: any[] = [];
+    var colors = ['darkgreen', '#aa8800', 'darkred'];
+
+    // build descriptions
+    for (var i = 0; i < this.options.numSlider + 1; ++i)
+    {
+      var minIndex = (i == 0) ? 0 : this.divisions[i - 1];
+      var maxIndex = (i == this.options.numSlider) ? this.numBars : this.divisions[i];
+      var range = [minIndex, maxIndex];
+
+      descs.push({ range: range, color: colors[i] });
+      minIndex = maxIndex;
+    }
+
+    // TODO! replace this by discrete scaling function (d3)
+    function colorize(_: any, i: number)
+    {
+      for (var j = 0; j < descs.length; ++j)
+      {
+        var colDesc = descs[j];
+        if (i < colDesc.range[1] && i >= colDesc.range[0])
+        {
+          return colDesc.color;
+        }
+      }
+    }
+
+    this.$node.selectAll('#bar').transition().duration(this.options.animationTime).attr('fill', colorize);
   }
 
   // -------------------------------------------------------------------------------------------------------------------
