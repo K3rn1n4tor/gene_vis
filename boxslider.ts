@@ -24,6 +24,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
   private numBars = 0;
   private sliders: any[] = [];
   private labels: any[] = [];
+  private boxValues: any[] = [];
 
   constructor(public data: any, public parent: Element, private options: any)
   {
@@ -180,14 +181,15 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
       width: size[0], height: size[1], 'class': 'boxslider'
     });
 
-    var $root = $svg.append('g').attr('transform', 'scale(' + scaling[0] + ',' + scaling[1] + ')');
+    var $root = $svg.append('g').attr('transform', 'scale(' + scaling[0] + ',' + scaling[1] + ')')
+      .attr('pointer-events', 'all');
 
     const that = this;
 
     function buildComponents(vec: any)
     {
-      that.buildBoxPlot($root, that.data);
-      that.buildSlider($root, that.data);
+      that.buildBoxPlot($root, vec);
+      that.buildSlider($root, vec);
 
       that.markReady();
     }
@@ -218,25 +220,23 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
     this.numBars = numBars;
     const barHeight = rawSize[1] / numBars;
 
-    var avgVec = [];
-
     for (var i = 0; i < numBars; ++i)
     {
       var startIndex = i * this.options.numAvg;
       var endIndex = Math.min(startIndex + this.options.numAvg, vec.length);
       var subSlice = vec.slice(startIndex, endIndex);
-      avgVec.push(d3.mean(subSlice));
+      this.boxValues.push(d3.mean(subSlice));
     }
 
-    var range = d3.extent(avgVec);
+    var range = d3.extent(this.boxValues);
 
     var scaleY = d3.scale.linear().domain([0, numBars - 1]).range([0, rawSize[1] - barHeight]);
     var scaleX = d3.scale.linear().domain(range).range([5, rawSize[0]]);
 
     // create groups that contain the bars
-    var bars = $root.selectAll('g').data(avgVec)
+    var bars = $root.selectAll('g').data(this.boxValues)
       .enter().append('g').attr({
-        class: 'bar', 'transform': (d: any, i: number) => { return 'translate(0, ' + scaleY(i) + ')'; }
+        id: 'barGroup', class: 'bar', 'transform': (d: any, i: number) => { return 'translate(0, ' + scaleY(i) + ')'; },
       });
 
     // create the bars
@@ -259,11 +259,9 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 
     var scaleY = d3.scale.linear().domain([0, this.numBars]).range([0, rawSize[1]]);
 
-    function onDragMove(d: any)
+    function onDragMove(_: any)
     {
-      // relative to group
       var posY = d3.event.y;
-      //console.log(d3.event);
 
       var id = d3.select(this).attr('id');
       var number = parseInt(id.slice(-1));
@@ -312,7 +310,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 
       var group = $root.append('g').attr(
       {
-        id: 'group' + String(i),
+        id: 'slider' + String(i),
         'transform': 'translate(0,' + (scaleY(sliderIndex) - barCover / 2) + ')',
       });
 
@@ -334,6 +332,42 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
       this.sliders.push(group);
       this.divisions.push(sliderIndex);
     }
+
+    var test = $root.append('rect').attr({
+      x: 0, y: 0,
+      width: rawSize[0], height: rawSize[1],
+      'opacity': 0
+    });
+
+    // create hovering line
+    var line = $root.append('line').attr({
+      id: 'infoLine', x1: 0, x2: rawSize[0], 'pointer-events': 'none'
+    }).style({
+      stroke: 'blue', fill: 'none', 'stroke-width': 1, 'stroke-dasharray': ('2,2')
+    }).on('click', null);
+
+    function onHover(d: any)
+    {
+      var mouseRel = d3.mouse(this);
+
+      var posY = mouseRel[1];//d3.event.y;
+      //console.log(d3.mouse(this));
+      var newIndex = d3.round(scaleY.invert(posY));
+      posY = scaleY(newIndex);
+
+      line.attr({ y1: posY, y2: posY });
+
+    }
+
+    test.on('click', null)
+      .on('mousemove', onHover)
+      .on('mouseover', (_: any) => { line.style('opacity', 1); })
+      .on('mouseout', (_: any) => {
+        const id = (<any>d3.event.relatedTarget).id;
+
+        if (id.startsWith('slider') || id.startsWith('bar')) { return; }
+        console.log(d3.event); line.style('opacity', 0);
+      });
   }
 
   // -------------------------------------------------------------------------------------------------------------------
