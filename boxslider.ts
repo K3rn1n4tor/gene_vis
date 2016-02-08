@@ -25,6 +25,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
   private sliders: any[] = [];
   private labels: any[] = [];
   private boxValues: any[] = [];
+  private $tooltip: d3.Selection<any>;
 
   constructor(public data: any, public parent: Element, private options: any)
   {
@@ -166,6 +167,30 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 
   // -------------------------------------------------------------------------------------------------------------------
 
+  getDivisionRanges(): any[]
+  {
+    if (this.labels.length == 0) { return; }
+
+    var ranges = [];
+
+    var numRanges = this.options.numSlider + 1;
+
+    for (var j = 0; j < numRanges; ++j)
+    {
+      var minIndex = (j == 0) ? 0 : this.divisions[j - 1];
+      var maxIndex = (j == numRanges - 1) ? this.numBars : this.divisions[j];
+
+      var minI = minIndex * this.options.numAvg;
+      var maxI = Math.min(maxIndex * this.options.numAvg, this.labels.length);
+
+      ranges.push(this.labels.slice(minI, maxI));
+    }
+
+    return ranges;
+  }
+
+  // -------------------------------------------------------------------------------------------------------------------
+
   /**
    *
    * @param $parent
@@ -181,8 +206,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
       width: size[0], height: size[1], 'class': 'boxslider'
     });
 
-    var $root = $svg.append('g').attr('transform', 'scale(' + scaling[0] + ',' + scaling[1] + ')')
-      .attr('pointer-events', 'all');
+    var $root = $svg.append('g').attr('transform', 'scale(' + scaling[0] + ',' + scaling[1] + ')');
 
     const that = this;
 
@@ -209,6 +233,8 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
     return $svg;
   }
 
+  // -------------------------------------------------------------------------------------------------------------------
+
   private buildBoxPlot($root: d3.Selection<any>, vec: any)
   {
     const that = this;
@@ -216,7 +242,8 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
     const rawSize = this.rawSize;
 
     const numElems = vec.length;
-    const numBars = numElems / this.options.numAvg;
+    this.options.numAvg = (numElems < this.options.numAvg * (this.options.numSlider + 1)) ? 1 : this.options.numAvg;
+    const numBars = Math.ceil(numElems / this.options.numAvg);
     this.numBars = numBars;
     const barHeight = rawSize[1] / numBars;
 
@@ -239,13 +266,41 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
         id: 'barGroup', class: 'bar', 'transform': (d: any, i: number) => { return 'translate(0, ' + scaleY(i) + ')'; },
       });
 
+    this.$tooltip = d3.select(this.parent).append('div').attr({
+      class: 'tooltip'
+    }).style({ opacity: 0, position: 'absolute !important', 'background': '#60AA85', width: '100px',
+      'font-size:': '14px', 'border-radius': '4px', 'text-align': 'center', padding: 0, margin: 0,
+    'pointer-events': 'none', left: 0, top: 0, 'color': 'white'});
+
+    function showText(d: any)
+    {
+      var mousePos = d3.mouse(that.parent);
+      var value = d3.round(d, 2);
+      var top = $(this).position().top;
+
+      d3.select(this).transition().duration(that.options.animationTime).attr('fill', 'darkorange');
+
+      that.$tooltip.style('opacity', 1);
+      that.$tooltip.html('Distance: ' + String(value));
+      that.$tooltip.style({ left: (mousePos[0] + 5) + 'px', top: (top) + 'px' });
+    }
+
+    function hideText(d: any)
+    {
+      that.$tooltip.style('opacity', 0);
+      that.colorizeBars();
+    }
+
     // create the bars
     bars.append('rect').attr({
       x: 0, y: 0,
       width: (d: any) => { return scaleX(d); }, height: barHeight,
-      'fill': 'steelblue', id: 'bar'
-    });
+      'fill': 'steelblue', id: 'bar', class: (_: any, i: number) => { return 'bar' + String(i); }
+    }).on('mouseover', showText)
+      .on('mouseout', hideText);
   }
+
+  // -------------------------------------------------------------------------------------------------------------------
 
   private buildSlider($root: d3.Selection<any>, vec: any)
   {
@@ -253,8 +308,11 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 
     const rawSize = this.rawSize;
     const size = this.size;
+    const scaling = this.options.scale;
 
-    const barHeight = 5 * rawSize[1] / size[1];//rawSize[1] / numBars;
+    console.log(scaling);
+
+    const barHeight = rawSize[1] / this.numBars / 2; //8 / scaling[1];
     const barCover = 3 * barHeight;
 
     var scaleY = d3.scale.linear().domain([0, this.numBars]).range([0, rawSize[1]]);
@@ -267,6 +325,10 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
       var number = parseInt(id.slice(-1));
       var index = that.divisions[number];
       var oldPosY = scaleY(index) - barCover / 2;
+
+      const rawSize = that.rawSize;
+      const scaling = that.options.scale;
+      const width = rawSize[0] * scaling[0];
 
       posY = Math.min(rawSize[1], Math.max(0, posY + oldPosY));
 
@@ -283,30 +345,49 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 
       newIndex = Math.min(borders[1], Math.max(borders[0], newIndex));
 
+      // obtain two values nearby slider
+      var minIndex = Math.max(0, newIndex - 1);
+      minIndex = Math.min(borders[1], Math.max(borders[0], minIndex));
+      var maxIndex = Math.min(that.numBars - 1, newIndex);
+      maxIndex = Math.min(borders[1], Math.max(borders[0], maxIndex));
+
+      // show average values of both distances
+      var value = d3.round((that.boxValues[minIndex] + that.boxValues[maxIndex]) / 2, 2);
+      var mousePos = d3.mouse(that.parent);
+      that.$tooltip.style('opacity', 1);
+      that.$tooltip.html('Distance: ' + String(value));
+
       if (newIndex != index)
       {
-        that.sliders[number].attr('transform', 'translate(0,' + (scaleY(newIndex)  - barCover / 2) + ')');
+        that.sliders[number].attr('transform', 'translate(0,' + (scaleY(newIndex) - barCover / 2) + ')');
+
         that.divisions[number] = newIndex;
         that.changed = true;
       }
 
-      that.colorizeBars();
-    }
+      var testPosY = $(that.sliders[number].node()).position().top;
+      var testHeight = barHeight * scaling[1];
+      that.$tooltip.style({ left: width + 'px', top: (testPosY + testHeight * 1.5 - 8.5) + 'px' });
 
-    //function originFunc() : any
-    //{
-    //  var obj: d3.Selection<any> = d3.select(this);
-    //  return { x: obj.attr('x'), y: obj.attr('y') };
-    //}
+      that.colorizeBars();
+      that.$node.select('.bar' + minIndex).datum(that.boxValues[minIndex])
+        .transition().duration(that.options.animationTime).attr('fill', 'darkorange');
+      that.$node.select('.bar' + maxIndex).datum(that.boxValues[maxIndex])
+        .transition().duration(that.options.animationTime).attr('fill', 'darkorange');
+    }
 
     var dragSlider = d3.behavior.drag()
       //.origin(originFunc)
-      .on('drag', onDragMove);
+      .on('drag', onDragMove)
+      .on('dragend', (_: any) => {
+        this.$tooltip.style('opacity', 0);
+        this.colorizeBars();
+      });
 
     for (var i = 0; i < this.options.numSlider; ++i)
     {
       const sliderIndex = this.options.sliderStarts[i];
-      const sliderRadius = 2;
+      const sliderRadius = 16 + 'px';
 
       var group = $root.append('g').attr(
       {
@@ -318,13 +399,13 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
       {
         id: 'slider' + String(i),
         width: rawSize[0], height: barCover, opacity: 0
-      });
+      }).on('mouseout', (_: any) => { this.$tooltip.style('opacity', 0); });
 
       var slider = group.append('rect').attr(
       {
         id: 'slider' + String(i),
-        y: barCover / 2 - barHeight / 2, height: barHeight, width: rawSize[0], fill: that.options.sliderColor,
-        rx: sliderRadius, ry: sliderRadius
+        y: barCover / 2 - barHeight / 2, height: barHeight + 'px', width: rawSize[0], fill: that.options.sliderColor,
+        rx: sliderRadius, ry: sliderRadius, opacity: 0.75
       });
 
       container.call(dragSlider);
@@ -333,41 +414,6 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
       this.divisions.push(sliderIndex);
     }
 
-    var test = $root.append('rect').attr({
-      x: 0, y: 0,
-      width: rawSize[0], height: rawSize[1],
-      'opacity': 0
-    });
-
-    // create hovering line
-    var line = $root.append('line').attr({
-      id: 'infoLine', x1: 0, x2: rawSize[0], 'pointer-events': 'none'
-    }).style({
-      stroke: 'blue', fill: 'none', 'stroke-width': 1, 'stroke-dasharray': ('2,2')
-    }).on('click', null);
-
-    function onHover(d: any)
-    {
-      var mouseRel = d3.mouse(this);
-
-      var posY = mouseRel[1];//d3.event.y;
-      //console.log(d3.mouse(this));
-      var newIndex = d3.round(scaleY.invert(posY));
-      posY = scaleY(newIndex);
-
-      line.attr({ y1: posY, y2: posY });
-
-    }
-
-    test.on('click', null)
-      .on('mousemove', onHover)
-      .on('mouseover', (_: any) => { line.style('opacity', 1); })
-      .on('mouseout', (_: any) => {
-        const id = (<any>d3.event.relatedTarget).id;
-
-        if (id.startsWith('slider') || id.startsWith('bar')) { return; }
-        console.log(d3.event); line.style('opacity', 0);
-      });
   }
 
   // -------------------------------------------------------------------------------------------------------------------
