@@ -255,7 +255,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
       this.boxValues.push(d3.mean(subSlice));
     }
 
-    var range = d3.extent(this.boxValues);
+    var range = (this.options.range) ? this.options.range : d3.extent(this.boxValues);
 
     var scaleY = d3.scale.linear().domain([0, numBars - 1]).range([0, rawSize[1] - barHeight]);
     var scaleX = d3.scale.linear().domain(range).range([5, rawSize[0]]);
@@ -365,24 +365,63 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
         that.changed = true;
       }
 
-      var testPosY = $(that.sliders[number].node()).position().top;
-      var testHeight = barHeight * scaling[1];
-      that.$tooltip.style({ left: width + 'px', top: (testPosY + testHeight * 1.5 - 8.5) + 'px' });
+      var sliderPosY = $(that.sliders[number].node()).position().top;
+      var sliderHeight = barHeight * scaling[1];
+      that.$tooltip.style({ left: width + 'px', top: (sliderPosY + sliderHeight * 1.5 - 8.5) + 'px' });
 
       that.colorizeBars();
       that.$node.select('.bar' + minIndex).datum(that.boxValues[minIndex])
         .transition().duration(that.options.animationTime).attr('fill', 'darkorange');
       that.$node.select('.bar' + maxIndex).datum(that.boxValues[maxIndex])
         .transition().duration(that.options.animationTime).attr('fill', 'darkorange');
+
+    }
+
+    function onDragStart(_: any)
+    {
+      var id = d3.select(this).attr('id');
+      var number = parseInt(id.slice(-1));
+      $root.select('.sliderBar' + number).transition().duration(that.options.animationTime)
+        .attr('fill', 'darkorange');
+    }
+
+    function onDragEnd(_: any)
+    {
+      var id = d3.select(this).attr('id');
+      var number = parseInt(id.slice(-1));
+
+      that.$tooltip.style('opacity', 0);
+      that.colorizeBars();
+
+      $root.select('.sliderBar' + number).transition().duration(that.options.animationTime)
+          .attr('fill', that.options.sliderColor);
     }
 
     var dragSlider = d3.behavior.drag()
       //.origin(originFunc)
+      .on('dragstart', onDragStart)
       .on('drag', onDragMove)
-      .on('dragend', (_: any) => {
-        this.$tooltip.style('opacity', 0);
-        this.colorizeBars();
-      });
+      .on('dragend', onDragEnd);
+
+    function onMouseOver(_: any)
+    {
+      const mousePos = d3.mouse($root.node());
+      const posY = mousePos[1];
+
+      const absPos = d3.mouse(that.parent);
+      const absPosX = absPos[0];
+      const absPosY = absPos[1];
+
+      var index = d3.round(scaleY.invert(posY) - 0.5);
+
+      var value = d3.round(that.boxValues[index], 2);
+      that.$node.select('.bar' + index).datum(value)
+        .transition().duration(that.options.animationTime).attr('fill', 'darkorange');
+
+      that.$tooltip.style('opacity', 1);
+      that.$tooltip.html('Distance: ' + String(value));
+      that.$tooltip.style({ left: absPosX + 5 + 'px', top: absPosY + 8 + 'px' });
+    }
 
     for (var i = 0; i < this.options.numSlider; ++i)
     {
@@ -399,11 +438,12 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
       {
         id: 'slider' + String(i),
         width: rawSize[0], height: barCover, opacity: 0
-      }).on('mouseout', (_: any) => { this.$tooltip.style('opacity', 0); });
+      }).on('mouseover', onMouseOver)
+        .on('mouseout', (_: any) => { that.colorizeBars(); this.$tooltip.style('opacity', 0); });
 
       var slider = group.append('rect').attr(
       {
-        id: 'slider' + String(i),
+        id: 'slider' + String(i), class: 'sliderBar' + String(i),
         y: barCover / 2 - barHeight / 2, height: barHeight + 'px', width: rawSize[0], fill: that.options.sliderColor,
         rx: sliderRadius, ry: sliderRadius, opacity: 0.75
       });
