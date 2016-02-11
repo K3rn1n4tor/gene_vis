@@ -329,7 +329,8 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
     this.options.numAvg = (numElems < this.options.numAvg * (this.options.numSlider + 1)) ? 1 : this.options.numAvg;
     const numBars = Math.ceil(numElems / this.options.numAvg);
     this.numBars = numBars;
-    const barHeight = rawSize[1] / numBars;
+    const barHeight = rawSize[1] / numElems * that.options.numAvg;
+    var lastBarHeight = 0;
 
     for (var i = 0; i < numBars; ++i)
     {
@@ -337,11 +338,12 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
       var endIndex = Math.min(startIndex + this.options.numAvg, vec.length);
       var subSlice = vec.slice(startIndex, endIndex);
       this.boxValues.push(d3.mean(subSlice));
+      lastBarHeight = (endIndex - startIndex) / this.options.numAvg * barHeight;
     }
 
     var range = (this.options.range) ? this.options.range : d3.extent(this.boxValues);
 
-    var scaleY = d3.scale.linear().domain([0, numBars - 1]).range([0, rawSize[1] - barHeight]);
+    var scaleY = d3.scale.linear().domain([0, numBars - 1]).range([0, rawSize[1] - lastBarHeight]);
     var scaleX = d3.scale.linear().domain(range).range([5, rawSize[0]]);
 
     // create dummy rect to detect hovering event
@@ -520,7 +522,25 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
     const barHeight = 6 / scaling[1];//rawSize[1] / this.numBars / 2; //8 / scaling[1];
     const barCover = 3 * barHeight;
 
-    var scaleY = d3.scale.linear().domain([0, this.numBars]).range([0, rawSize[1]]);
+    const numElems = vec.length;
+    var histoBarHeight = rawSize[1] / numElems * that.options.numAvg;
+    var testTicks = [];
+    var testRanges = [];
+
+    var i = 0;
+    for (i = 0; i < this.numBars; ++i)
+    {
+      testTicks.push(i);
+      testRanges.push(i * histoBarHeight);
+      //testTicks.push(i * this.options.numAvg);
+      //testRanges.push(i * barHeight);
+    }
+
+    testTicks.push(this.numBars);
+    testRanges.push(rawSize[1]);
+
+
+    var scaleY = d3.scale.linear().domain(testTicks).range(testRanges);
 
     var dragSlider = d3.behavior.drag()
       .on('dragstart', this._dragHandler('dragstart', $root, [barHeight, scaleY]))
