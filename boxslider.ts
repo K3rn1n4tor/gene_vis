@@ -517,7 +517,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
     const rawSize = this.rawSize;
     const scaling = this.options.scale;
 
-    const barHeight = rawSize[1] / this.numBars / 2; //8 / scaling[1];
+    const barHeight = 6 / scaling[1];//rawSize[1] / this.numBars / 2; //8 / scaling[1];
     const barCover = 3 * barHeight;
 
     var scaleY = d3.scale.linear().domain([0, this.numBars]).range([0, rawSize[1]]);
