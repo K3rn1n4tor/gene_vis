@@ -387,12 +387,38 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 
     if (type == 'dragstart')
     {
+      barHeight = args[0];
+      scaleY = args[1];
+
       return function(_: any)
       {
+        const rawSize = that.rawSize;
+        const scaling = that.options.scale;
+        const width = rawSize[0] * scaling[0];
+
         var id = d3.select(this).attr('id');
         var number = parseInt(id.slice(-1));
         $root.select('.sliderBar' + number).transition().duration(that.options.animationTime)
           .attr('fill', 'darkorange');
+
+        var mousePos = d3.mouse($root.node());
+        var posY = mousePos[1];
+
+        var newIndex = d3.round(scaleY.invert(posY));
+        var maxIndex = Math.max(0, Math.min(that.numBars - 1, newIndex));
+        var minIndex = Math.max(0, Math.min(that.numBars - 1, newIndex - 1));
+
+        var value = d3.round((that.boxValues[minIndex] + that.boxValues[maxIndex]) / 2, 2);
+        that.$tooltip.style('opacity', 1);
+        that.$tooltip.html('Distance: ' + String(value));
+        var sliderPosY = $(that.sliders[number].node()).position().top;
+        var sliderHeight = barHeight * scaling[1];
+        that.$tooltip.style({ left: width + 'px', top: (sliderPosY + sliderHeight * 1.5 - 8.5) + 'px' });
+
+        that.$node.select('.bar' + minIndex).datum(that.boxValues[minIndex])
+          .transition().duration(that.options.animationTime).attr('fill', 'darkorange');
+        that.$node.select('.bar' + maxIndex).datum(that.boxValues[maxIndex])
+          .transition().duration(that.options.animationTime).attr('fill', 'darkorange');
       }
     }
 
@@ -404,23 +430,21 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 
       return function(_: any)
       {
-        var posY = d3.event.y;
-
-        var id = d3.select(this).attr('id');
-        var number = parseInt(id.slice(-1));
-        var index = that.divisions[number];
-        var oldPosY = scaleY(index) - barCover / 2;
-
         const rawSize = that.rawSize;
         const scaling = that.options.scale;
         const width = rawSize[0] * scaling[0];
 
-        posY = Math.min(rawSize[1], Math.max(0, posY + oldPosY));
+        var id = d3.select(this).attr('id');
+        var number = parseInt(id.slice(-1));
+        var index = that.divisions[number];
+
+        var mousePos = d3.mouse($root.node());
+        var posY = mousePos[1];
 
         var newIndex = d3.round(scaleY.invert(posY));
 
         // define borders
-        var borders = [0, this.numBars];
+        var borders = [0, that.numBars];
         if (that.options.numSlider > 1)
         {
           var leftIndex = (number == 0) ? 0 :  that.divisions[number - 1] + 1;
@@ -432,19 +456,20 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 
         // obtain two values nearby slider
         var minIndex = Math.max(0, newIndex - 1);
-        minIndex = Math.min(borders[1], Math.max(borders[0], minIndex));
+        minIndex = Math.min(borders[1], Math.max(Math.max(borders[0] - 1, 0), minIndex));
         var maxIndex = Math.min(that.numBars - 1, newIndex);
         maxIndex = Math.min(borders[1], Math.max(borders[0], maxIndex));
 
         // show average values of both distances
         var value = d3.round((that.boxValues[minIndex] + that.boxValues[maxIndex]) / 2, 2);
-        var mousePos = d3.mouse(that.parent);
+        //var mousePos = d3.mouse(that.parent);
         that.$tooltip.style('opacity', 1);
         that.$tooltip.html('Distance: ' + String(value));
 
         if (newIndex != index)
         {
-          that.sliders[number].attr('transform', 'translate(0,' + (scaleY(newIndex) - barCover / 2) + ')');
+          that.sliders[number].transition().duration(that.options.animationTime)
+            .attr('transform', 'translate(0,' + (scaleY(newIndex) - barCover / 2) + ')');
 
           that.divisions[number] = newIndex;
           that.changed = true;
@@ -498,7 +523,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
     var scaleY = d3.scale.linear().domain([0, this.numBars]).range([0, rawSize[1]]);
 
     var dragSlider = d3.behavior.drag()
-      .on('dragstart', this._dragHandler('dragstart', $root, []))
+      .on('dragstart', this._dragHandler('dragstart', $root, [barHeight, scaleY]))
       .on('drag', this._dragHandler('drag', $root, [barCover, barHeight, scaleY]))
       .on('dragend', this._dragHandler('dragend', $root, []));
 
