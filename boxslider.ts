@@ -339,7 +339,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 
     // if number of elements is too small and number of bars is smaller than the number of sliders, use
     // and average value of 1 instead
-    this.options.numAvg = (numElems < this.options.numAvg * (this.options.numSlider + 1)) ? 1 : this.options.numAvg;
+    this.options.numAvg = (numElems < this.options.numAvg * (this.options.numSlider + 3)) ? 1 : this.options.numAvg;
     const numBars = Math.ceil(numElems / this.options.numAvg);
     this.numBars = numBars;
     // compute height of bars
