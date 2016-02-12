@@ -16,6 +16,10 @@ import ranges = require('../caleydo_core/range');
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // class declaration
+/**
+ * This is both a box chart and a range slider to analyze the distribution of a given vector
+ * and to divide these chart in divisions via sliders.
+ */
 export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 {
   private $node: d3.Selection<any>;
@@ -26,18 +30,25 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
   private labels: any[] = [];
   private boxValues: any[] = [];
   private $tooltip: d3.Selection<any>;
+  private isDragging: boolean = false; // way to detect dragging behavior
 
+  /**
+   * Initialize the visualization.
+   * @param data vector of distances
+   * @param parent HTML element / node where the vis should be created in
+   * @param options additional settings
+     */
   constructor(public data: any, public parent: Element, private options: any)
   {
     super();
     this.options = C.mixin({
       scale: [1, 1],
       rotate: 0,
-      numAvg: 10,
-      numSlider: 2,
-      sliderColor: 'grey',
-      sliderStarts: [1,3],
-      animationTime: 50,
+      numAvg: 10, // default number of elements averaged and grouped in one box element
+      numSlider: 2, // number of sliders
+      sliderColor: 'grey', // default color for sliders
+      sliderHeight: 6, // height of slider in px
+      duration: 50 // duration of animations in ms
     }, options);
 
     if (this.options.scaleTo)
@@ -56,18 +67,18 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
   // -------------------------------------------------------------------------------------------------------------------
 
   /**
-   *
+   * Obtain the initial size of this visualization.
    * @returns {number[]}
      */
   get rawSize(): [number, number]
   {
-    return [300, 50];
+    return [50, 300];
   }
 
   // -------------------------------------------------------------------------------------------------------------------
 
   /**
-   *
+   * Return the root node of this visualization.
    * @returns {Element}
      */
   get node()
@@ -78,7 +89,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
   // -------------------------------------------------------------------------------------------------------------------
 
   /**
-   *
+   * Signals that the status has changed (e.g. slider was moved).
    * @returns {boolean}
      */
   hasChanged()
@@ -113,7 +124,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
   // -------------------------------------------------------------------------------------------------------------------
 
   /**
-   *
+   * Set labels corresponding to the distance values.
    * @param labels
      */
   setLabels(labels: any[])
@@ -124,7 +135,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
   // -------------------------------------------------------------------------------------------------------------------
 
   /**
-   *
+   * Returns the raw division arrays, containing indices of each slider.
    * @returns {any[]}
      */
   getCurrentDivisions()
@@ -149,7 +160,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
   // -------------------------------------------------------------------------------------------------------------------
 
   /**
-   *
+   * Transforms and rotates visualization by given scale and rotation angle.
    * @param scale
    * @param rotate
    * @returns {any}
@@ -187,7 +198,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
   // -------------------------------------------------------------------------------------------------------------------
 
   /**
-   *
+   * Determines labels of each division if labels are set.
    * @returns {Array}
      */
   getDivisionRanges(): any[]
@@ -215,7 +226,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
   // -------------------------------------------------------------------------------------------------------------------
 
   /**
-   *
+   * Build all the graphical components.
    * @param $parent
    * @returns {Selection<any>}
      */
@@ -235,7 +246,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 
     function buildComponents(vec: any)
     {
-      that.buildBoxPlot($root, vec);
+      that.buildBoxChart($root, vec);
       that.buildSlider($root, vec);
 
       that.markReady();
@@ -259,10 +270,10 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
   // -------------------------------------------------------------------------------------------------------------------
 
   /**
-   *
-   * @param type
-   * @param $root
-   * @param args
+   * Function that handles all mouse events for this visualization.
+   * @param type type of mouse event
+   * @param $root root of this visualization
+   * @param args additional arguments
    * @returns {function(any): undefined}
      * @private
      */
@@ -276,6 +287,8 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 
       return function(_: any)
       {
+        if (that.isDragging) { return; }
+
         const mousePos = d3.mouse($root.node());
         const posY = mousePos[1];
 
@@ -292,9 +305,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
         if (type == 'mousemove') {  that.colorizeBars(); }
 
         that.$node.select('.bar' + index).datum(value)
-          .transition().duration(that.options.animationTime).attr('fill', 'darkorange');
-
-        //d3.select(this).transition().duration(that.options.animationTime).attr('fill', 'darkorange');
+          .transition().duration(that.options.duration).attr('fill', 'darkorange');
 
         that.$tooltip.style('opacity', 1);
         that.$tooltip.html('Distance: ' + String(value));
@@ -315,20 +326,23 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
   // -------------------------------------------------------------------------------------------------------------------
 
   /**
-   *
+   * Build the box chart for this visualization.
    * @param $root
-   * @param vec
+   * @param vec raw data
      */
-  private buildBoxPlot($root: d3.Selection<any>, vec: any)
+  private buildBoxChart($root: d3.Selection<any>, vec: any)
   {
     const that = this;
 
     const rawSize = this.rawSize;
-
     const numElems = vec.length;
+
+    // if number of elements is too small and number of bars is smaller than the number of sliders, use
+    // and average value of 1 instead
     this.options.numAvg = (numElems < this.options.numAvg * (this.options.numSlider + 1)) ? 1 : this.options.numAvg;
     const numBars = Math.ceil(numElems / this.options.numAvg);
     this.numBars = numBars;
+    // compute height of bars
     const barHeight = rawSize[1] / numElems * that.options.numAvg;
     var lastBarHeight = 0;
 
@@ -337,7 +351,9 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
       var startIndex = i * this.options.numAvg;
       var endIndex = Math.min(startIndex + this.options.numAvg, vec.length);
       var subSlice = vec.slice(startIndex, endIndex);
+      // get the box values (needed if values are averaged)
       this.boxValues.push(d3.mean(subSlice));
+      // get the last bar height to adjust the scaleY at the end
       lastBarHeight = (endIndex - startIndex) / this.options.numAvg * barHeight;
     }
 
@@ -357,6 +373,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
         id: 'barGroup', class: 'bar', 'transform': (d: any, i: number) => { return 'translate(0, ' + scaleY(i) + ')'; },
       });
 
+    // create a custom tooltip object to display distances
     this.$tooltip = d3.select(this.parent).append('div').attr({
       class: 'tooltip'
     }).style({ opacity: 0, position: 'absolute !important', 'background': '#60AA85', width: '100px',
@@ -376,55 +393,19 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
   // -------------------------------------------------------------------------------------------------------------------
 
   /**
-   *
-   * @param type
-   * @param $root
-   * @param args
+   * Function that handles all the drag events for this visualization.
+   * @param type type of drag event
+   * @param $root root element of this vis
+   * @param args additional arguments
    * @returns {function(any): undefined}
      * @private
      */
   private _dragHandler(type: string, $root: d3.Selection<any>, args: any)
   {
     var that = this;
+    const tooltipHeight = 17;
 
-    if (type == 'dragstart')
-    {
-      barHeight = args[0];
-      scaleY = args[1];
-
-      return function(_: any)
-      {
-        const rawSize = that.rawSize;
-        const scaling = that.options.scale;
-        const width = rawSize[0] * scaling[0];
-
-        var id = d3.select(this).attr('id');
-        var number = parseInt(id.slice(-1));
-        $root.select('.sliderBar' + number).transition().duration(that.options.animationTime)
-          .attr('fill', 'darkorange');
-
-        var mousePos = d3.mouse($root.node());
-        var posY = mousePos[1];
-
-        var newIndex = d3.round(scaleY.invert(posY));
-        var maxIndex = Math.max(0, Math.min(that.numBars - 1, newIndex));
-        var minIndex = Math.max(0, Math.min(that.numBars - 1, newIndex - 1));
-
-        var value = d3.round((that.boxValues[minIndex] + that.boxValues[maxIndex]) / 2, 2);
-        that.$tooltip.style('opacity', 1);
-        that.$tooltip.html('Distance: ' + String(value));
-        var sliderPosY = $(that.sliders[number].node()).position().top;
-        var sliderHeight = barHeight * scaling[1];
-        that.$tooltip.style({ left: width + 'px', top: (sliderPosY + sliderHeight * 1.5 - 8.5) + 'px' });
-
-        that.$node.select('.bar' + minIndex).datum(that.boxValues[minIndex])
-          .transition().duration(that.options.animationTime).attr('fill', 'darkorange');
-        that.$node.select('.bar' + maxIndex).datum(that.boxValues[maxIndex])
-          .transition().duration(that.options.animationTime).attr('fill', 'darkorange');
-      }
-    }
-
-    else if (type == 'drag')
+    if (type == 'dragstart' || type == 'drag')
     {
       var barCover = args[0];
       var barHeight = args[1];
@@ -432,60 +413,77 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 
       return function(_: any)
       {
+        that.isDragging = true;
+
         const rawSize = that.rawSize;
         const scaling = that.options.scale;
         const width = rawSize[0] * scaling[0];
 
-        var id = d3.select(this).attr('id');
-        var number = parseInt(id.slice(-1));
-        var index = that.divisions[number];
+        const id = d3.select(this).attr('id');
+        const number = parseInt(id.slice(-1));
+        const index = that.divisions[number];
+
+        $root.select('.sliderBar' + number).transition().duration(that.options.duration)
+          .attr('fill', 'darkorange');
 
         var mousePos = d3.mouse($root.node());
         var posY = mousePos[1];
 
+        // new index
         var newIndex = d3.round(scaleY.invert(posY));
+        // indices around slider
+        var minIndex, maxIndex;
 
-        // define borders
-        var borders = [0, that.numBars];
-        if (that.options.numSlider > 1)
+        // handle indices differently
+        if (type == 'dragstart')
         {
-          var leftIndex = (number == 0) ? 0 :  that.divisions[number - 1] + 1;
-          var rightIndex = (number == that.options.numSlider - 1) ? that.numBars : that.divisions[number + 1] - 1;
-          borders = [leftIndex, rightIndex];
+          maxIndex = Math.max(0, Math.min(that.numBars - 1, newIndex));
+          minIndex = Math.max(0, Math.min(that.numBars - 1, newIndex - 1));
+        }
+        else // type == 'drag'
+        {
+          var borders = [0, that.numBars];
+          if (that.options.numSlider > 1)
+          {
+            var leftIndex = (number == 0) ? 0 :  that.divisions[number - 1] + 1;
+            var rightIndex = (number == that.options.numSlider - 1) ? that.numBars : that.divisions[number + 1] - 1;
+            borders = [leftIndex, rightIndex];
+          }
+
+          newIndex = Math.min(borders[1], Math.max(borders[0], newIndex));
+
+          // obtain two values nearby slider
+          minIndex = Math.max(0, newIndex - 1);
+          minIndex = Math.min(borders[1], Math.max(Math.max(borders[0] - 1, 0), minIndex));
+          maxIndex = Math.min(that.numBars - 1, newIndex);
+          maxIndex = Math.min(borders[1], Math.max(borders[0], maxIndex));
+
+          if (newIndex != index)
+          {
+            that.sliders[number].transition().duration(that.options.duration)
+              .attr('transform', 'translate(0,' + (scaleY(newIndex) - barCover / 2) + ')');
+
+            that.divisions[number] = newIndex;
+            that.changed = true;
+          }
+
+          // colorize bars before recoloring
+          that.colorizeBars();
         }
 
-        newIndex = Math.min(borders[1], Math.max(borders[0], newIndex));
 
-        // obtain two values nearby slider
-        var minIndex = Math.max(0, newIndex - 1);
-        minIndex = Math.min(borders[1], Math.max(Math.max(borders[0] - 1, 0), minIndex));
-        var maxIndex = Math.min(that.numBars - 1, newIndex);
-        maxIndex = Math.min(borders[1], Math.max(borders[0], maxIndex));
+        const value = d3.round((that.boxValues[minIndex] + that.boxValues[maxIndex]) / 2, 2);
+        const sliderPosY = $(that.sliders[number].node()).position().top;
+        const sliderHeight = barHeight * scaling[1];
 
-        // show average values of both distances
-        var value = d3.round((that.boxValues[minIndex] + that.boxValues[maxIndex]) / 2, 2);
-        //var mousePos = d3.mouse(that.parent);
         that.$tooltip.style('opacity', 1);
         that.$tooltip.html('Distance: ' + String(value));
+        that.$tooltip.style({ left: width + 'px', top: (sliderPosY + sliderHeight * 1.5 - tooltipHeight / 2) + 'px' });
 
-        if (newIndex != index)
-        {
-          that.sliders[number].transition().duration(that.options.animationTime)
-            .attr('transform', 'translate(0,' + (scaleY(newIndex) - barCover / 2) + ')');
-
-          that.divisions[number] = newIndex;
-          that.changed = true;
-        }
-
-        var sliderPosY = $(that.sliders[number].node()).position().top;
-        var sliderHeight = barHeight * scaling[1];
-        that.$tooltip.style({ left: width + 'px', top: (sliderPosY + sliderHeight * 1.5 - 8.5) + 'px' });
-
-        that.colorizeBars();
         that.$node.select('.bar' + minIndex).datum(that.boxValues[minIndex])
-          .transition().duration(that.options.animationTime).attr('fill', 'darkorange');
+          .transition().duration(that.options.duration).attr('fill', 'darkorange');
         that.$node.select('.bar' + maxIndex).datum(that.boxValues[maxIndex])
-          .transition().duration(that.options.animationTime).attr('fill', 'darkorange');
+          .transition().duration(that.options.duration).attr('fill', 'darkorange');
       }
     }
 
@@ -493,22 +491,87 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
     {
       return function(_: any)
       {
+        that.isDragging = false;
+
         var id = d3.select(this).attr('id');
         var number = parseInt(id.slice(-1));
 
         that.$tooltip.style('opacity', 0);
         that.colorizeBars();
 
-        $root.select('.sliderBar' + number).transition().duration(that.options.animationTime)
+        $root.select('.sliderBar' + number).transition().duration(that.options.duration)
             .attr('fill', that.options.sliderColor);
       }
     }
+
+    d3.event.stopPropagation();
   }
 
   // -------------------------------------------------------------------------------------------------------------------
 
   /**
-   *
+   * Find the start indices of each slider by analyzing the distribution of the data.
+   * @param vec raw data
+   * @returns {number[]}
+   * @private
+     */
+  private _findSliderStarts(vec: any) : number[]
+  {
+    // set slider indices for given number of sliders
+    var sliderStarts : number[] = [];
+
+    if (this.options.numSlider > 1)
+    {
+      const Q1 = d3.quantile(vec, 0.25);
+      const Q3 = d3.quantile(vec, 0.75);
+      //const Q2 = d3.quantile(vec, 0.5);
+      //const IQR = 1.5 * (Q3 - Q1);
+      const minValue = Q1;
+      const maxValue = Q3;
+      const stepSize =  (maxValue - minValue) / (this.options.numSlider - 1);
+
+      for (var j = 0; j < this.options.numSlider; ++j)
+      {
+        const currentValue = minValue + j * stepSize;
+        var index = (sliderStarts.length == 0) ? 0 : sliderStarts[j - 1];
+
+        for (var i = index; i < vec.length; ++i)
+        {
+          var value = vec[i];
+
+          if (value >= currentValue)
+          {
+            index = Math.floor(i / this.options.numAvg);
+            sliderStarts.push(index);
+            break;
+          }
+        }
+      }
+    }
+    else
+    {
+      const Q2 = d3.quantile(vec, 0.50);
+
+      for (var i = 0; i < vec.length; ++i)
+      {
+        var value = vec[i];
+
+        if (value >= Q2)
+        {
+          index = Math.floor(i / this.options.numAvg);
+          sliderStarts.push(index);
+          break;
+        }
+      }
+    }
+
+    return sliderStarts;
+  }
+
+  // -------------------------------------------------------------------------------------------------------------------
+
+  /**
+   * Build all the sliders for the bar chart to divide bars into numSlider + 1 groups.
    * @param $root
    * @param vec
      */
@@ -519,38 +582,39 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
     const rawSize = this.rawSize;
     const scaling = this.options.scale;
 
-    const barHeight = 6 / scaling[1];//rawSize[1] / this.numBars / 2; //8 / scaling[1];
+    const barHeight = 6 / scaling[1];
     const barCover = 3 * barHeight;
 
     const numElems = vec.length;
     var histoBarHeight = rawSize[1] / numElems * that.options.numAvg;
-    var testTicks = [];
-    var testRanges = [];
+    var sliderIndices = [];
+    var sliderTicks = [];
 
-    var i = 0;
-    for (i = 0; i < this.numBars; ++i)
+    for (var i = 0; i < this.numBars; ++i)
     {
-      testTicks.push(i);
-      testRanges.push(i * histoBarHeight);
-      //testTicks.push(i * this.options.numAvg);
-      //testRanges.push(i * barHeight);
+      sliderIndices.push(i);
+      sliderTicks.push(i * histoBarHeight);
     }
 
-    testTicks.push(this.numBars);
-    testRanges.push(rawSize[1]);
+    sliderIndices.push(this.numBars);
+    sliderTicks.push(rawSize[1]);
 
 
-    var scaleY = d3.scale.linear().domain(testTicks).range(testRanges);
+    var scaleY = d3.scale.linear().domain(sliderIndices).range(sliderTicks);
 
     var dragSlider = d3.behavior.drag()
-      .on('dragstart', this._dragHandler('dragstart', $root, [barHeight, scaleY]))
+      .on('dragstart', this._dragHandler('dragstart', $root, [barCover, barHeight, scaleY]))
       .on('drag', this._dragHandler('drag', $root, [barCover, barHeight, scaleY]))
       .on('dragend', this._dragHandler('dragend', $root, []));
 
+    // find starting indices of each slider
+    var sliderStarts = this._findSliderStarts(vec);
+
+    // create slider element
     for (var i = 0; i < this.options.numSlider; ++i)
     {
-      const sliderIndex = this.options.sliderStarts[i];
-      const sliderRadius = 16 + 'px';
+      const sliderIndex = sliderStarts[i];
+      const sliderRadius = 10 + 'px';
 
       var group = $root.append('g').attr(
       {
@@ -583,12 +647,16 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
   // -------------------------------------------------------------------------------------------------------------------
 
   /**
-   *
+   * Color the bars with given, pre-defined colors.
    */
   private colorizeBars()
   {
     var descs: any[] = [];
-    var colors = ['darkgreen', '#aa8800', 'darkred'];
+    // TODO! implement custom interpolator for colors
+    var colors = (this.options.numSlider == 1) ? ['darkgreen', 'darkred'] : ['darkgreen', '#aa8800', 'darkred'];
+
+    var sliderIndices = Array.apply(null, Array(this.options.numSlider + 1)).map( (_, i: number) => { return i; });
+    var colorScale = d3.scale.linear().domain(sliderIndices).range(<any>colors);
 
     // build descriptions
     for (var i = 0; i < this.options.numSlider + 1; ++i)
@@ -597,7 +665,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
       var maxIndex = (i == this.options.numSlider) ? this.numBars : this.divisions[i];
       var range = [minIndex, maxIndex];
 
-      descs.push({ range: range, color: colors[i] });
+      descs.push({ range: range, color: colorScale(i) });
       minIndex = maxIndex;
     }
 
@@ -614,13 +682,13 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
       }
     }
 
-    this.$node.selectAll('#bar').transition().duration(this.options.animationTime).attr('fill', colorize);
+    this.$node.selectAll('#bar').transition().duration(this.options.duration).attr('fill', colorize);
   }
 
   // -------------------------------------------------------------------------------------------------------------------
 
   /**
-   * destroys the node of this object
+   * Destroys the node of this object.
    */
   destroy()
   {
@@ -632,7 +700,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
 // creator functions
 
 /**
- *
+ * Create a new bar chart + slider object.
  * @param data
  * @param parent
  * @param options
