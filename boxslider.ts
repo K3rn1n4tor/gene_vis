@@ -385,7 +385,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
     bars.append('rect').attr({
       x: 0, y: 0,
       width: (d: any) => { return scaleX(d); }, height: barHeight,
-      'fill': 'steelblue', id: 'bar', class: (_: any, i: number) => { return 'bar' + String(i); }
+      'fill': this.options.sliderColor, id: 'bar', class: (_: any, i: number) => { return 'bar' + String(i); }
     }).on('mouseover', this._mouseHandler('mouseover', $root, [scaleY]))
       .on('mouseout', this._mouseHandler('mouseout', $root, []));
   }
@@ -651,6 +651,12 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
    */
   private colorizeBars()
   {
+    if (this.options.numSlider == 0)
+    {
+      this.$node.selectAll('#bar').transition().duration(this.options.duration).attr('fill', this.options.sliderColor);
+      return;
+    }
+
     var descs: any[] = [];
     // TODO! implement custom interpolator for colors
     var colors = (this.options.numSlider == 1) ? ['darkgreen', 'darkred'] : ['darkgreen', '#aa8800', 'darkred'];
