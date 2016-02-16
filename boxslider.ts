@@ -136,6 +136,18 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
   // -------------------------------------------------------------------------------------------------------------------
 
   /**
+   * Set divisions manually and colorize bars accordingly
+   * @param divisions
+     */
+  setDivisions(divisions: number[])
+  {
+    this.divisions = divisions;
+    this.colorizeBars();
+  }
+
+  // -------------------------------------------------------------------------------------------------------------------
+
+  /**
    * Returns the raw division arrays, containing indices of each slider.
    * @returns {any[]}
      */
@@ -652,24 +664,26 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
    */
   private colorizeBars()
   {
-    if (this.options.numSlider == 0)
+    if (this.options.numSlider == 0 && this.divisions.length == 0)
     {
       this.$node.selectAll('#bar').transition().duration(this.options.duration).attr('fill', this.options.sliderColor);
       return;
     }
 
+    const numDivs = this.divisions.length;
+
     var descs: any[] = [];
     // TODO! implement custom interpolator for colors
-    var colors = (this.options.numSlider == 1) ? ['darkgreen', 'darkred'] : ['darkgreen', '#aa8800', 'darkred'];
+    var colors = (numDivs == 1) ? ['darkgreen', 'darkred'] : ['darkgreen', '#aa8800', 'darkred'];
 
-    var sliderIndices = Array.apply(null, Array(this.options.numSlider + 1)).map( (_, i: number) => { return i; });
+    var sliderIndices = Array.apply(null, Array(numDivs + 1)).map( (_, i: number) => { return i; });
     var colorScale = d3.scale.linear().domain(sliderIndices).range(<any>colors);
 
     // build descriptions
-    for (var i = 0; i < this.options.numSlider + 1; ++i)
+    for (var i = 0; i < numDivs + 1; ++i)
     {
       var minIndex = (i == 0) ? 0 : this.divisions[i - 1];
-      var maxIndex = (i == this.options.numSlider) ? this.numBars : this.divisions[i];
+      var maxIndex = (i == numDivs) ? this.numBars : this.divisions[i];
       var range = [minIndex, maxIndex];
 
       descs.push({ range: range, color: colorScale(i) });
