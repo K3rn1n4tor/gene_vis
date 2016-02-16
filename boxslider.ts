@@ -4,7 +4,8 @@
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // libraries
-import d3 = require('d3')
+import d3 = require('d3');
+import $ = require('jquery');
 import C = require('../caleydo_core/main');
 import vis = require('../caleydo_core/vis');
 
