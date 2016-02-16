@@ -398,7 +398,8 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
     bars.append('rect').attr({
       x: 0, y: 0,
       width: (d: any) => { return scaleX(d); }, height: barHeight,
-      'fill': this.options.sliderColor, id: 'bar', class: (_: any, i: number) => { return 'bar' + String(i); }
+      'fill': this.options.sliderColor, id: 'bar', class: (_: any, i: number) => { return 'bar' + String(i);},
+      'shape-rendering': 'geometricPrecision'
     }).on('mouseover', this._mouseHandler('mouseover', $root, [scaleY]))
       .on('mouseout', this._mouseHandler('mouseout', $root, []));
   }
