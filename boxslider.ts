@@ -103,6 +103,17 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
   // -------------------------------------------------------------------------------------------------------------------
 
   /**
+   * Return the labels of the divider
+   * @returns {any[]}
+     */
+  getLabels()
+  {
+    return this.labels;
+  }
+
+  // -------------------------------------------------------------------------------------------------------------------
+
+  /**
    *
    * @param name
    * @param val
