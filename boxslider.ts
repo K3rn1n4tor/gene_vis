@@ -241,7 +241,8 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
       var minI = minIndex * this.options.numAvg;
       var maxI = Math.min(maxIndex * this.options.numAvg, this.labels.length);
 
-      ranges.push(this.labels.slice(minI, maxI));
+      //ranges.push(this.labels.slice(minI, maxI));
+      ranges.push('(' + String(minI) + ':' + String(maxI) + ')');
     }
 
     return ranges;
