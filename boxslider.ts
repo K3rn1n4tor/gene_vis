@@ -225,7 +225,7 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
    * Determines labels of each division if labels are set.
    * @returns {Array}
      */
-  getDivisionRanges(): any[]
+  getDivisionRanges(indexRange = true): any[]
   {
     if (this.labels.length == 0) { return; }
 
@@ -242,7 +242,8 @@ export class BoxSlider extends vis.AVisInstance implements vis.IVisInstance
       var maxI = Math.min(maxIndex * this.options.numAvg, this.labels.length);
 
       //ranges.push(this.labels.slice(minI, maxI));
-      ranges.push('(' + String(minI) + ':' + String(maxI) + ')');
+      if (indexRange) { ranges.push('(' + String(minI) + ':' + String(maxI) + ')'); }
+      else { ranges.push(this.labels.slice(minI, maxI)); }
     }
 
     return ranges;
